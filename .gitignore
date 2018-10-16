@@ -6,3 +6,4 @@ STM32F7-DISCO/Debug/makefile
 STM32F7-DISCO/Debug/output.map
 *.elf
 STM32F7-DISCO/Debug/STM32F7-DISCO.hex
+VideoJoystick/bin
