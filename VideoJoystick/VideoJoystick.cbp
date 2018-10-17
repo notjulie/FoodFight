@@ -31,8 +31,36 @@
 		<Compiler>
 			<Add option="-Wall" />
 			<Add option="-fexceptions" />
+			<Add option="-pthread" />
+			<Add directory="/opt/vc/include" />
 		</Compiler>
+		<Linker>
+			<Add option="-pthread" />
+			<Add library="/opt/vc/lib/libvcos.so" />
+			<Add library="/opt/vc/lib/libmmal.so" />
+			<Add library="/opt/vc/lib/libmmal_components.so" />
+			<Add library="/opt/vc/lib/libmmal_util.so" />
+			<Add library="/opt/vc/lib/libmmal_core.so" />
+			<Add library="/opt/vc/lib/libvcsm.so" />
+			<Add library="/opt/vc/lib/libmmal_vc_client.so" />
+			<Add library="/opt/vc/lib/libvchiq_arm.so" />
+			<Add library="/opt/vc/lib/libvchostif.a" />
+			<Add library="/opt/vc/lib/libbcm_host.so" />
+			<Add directory="/opt/vc/lib" />
+		</Linker>
 		<Unit filename="main.cpp" />
+		<Unit filename="raspicam/RaspiCLI.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="raspicam/RaspiCamControl.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="raspicam/RaspiPreview.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="raspicam/RaspiVidYUV.c">
+			<Option compilerVar="CC" />
+		</Unit>
 		<Extensions>
 			<code_completion />
 			<debugger />

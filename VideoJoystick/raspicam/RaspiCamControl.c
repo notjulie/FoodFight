@@ -615,7 +615,7 @@ int raspicamcontrol_parse_cmdline(RASPICAM_CAMERA_PARAMETERS *params, const char
       params->exposureMode = exposure_mode_from_string(arg2);
       used = 2;
       break;
-      
+
    case CommandFlicker : // flicker avoid mode - needs string
       params->flickerAvoidMode = flicker_avoid_mode_from_string(arg2);
       used = 2;
@@ -862,7 +862,7 @@ void raspicamcontrol_display_help()
    {
       fprintf(stdout, ",%s", exposure_map[i].mode);
    }
-   
+
    fprintf(stdout, "\n\nFlicker avoid mode options :\n%s", flicker_avoid_map[0].mode );
 
    for (i=1;i<flicker_avoid_map_size;i++)
@@ -1605,6 +1605,7 @@ int raspicamcontrol_set_annotate(MMAL_COMPONENT_T *camera, const int settings, c
                 const int text_size, const int text_colour, const int bg_colour,
                 const unsigned int justify, const unsigned int x, const unsigned int y)
 {
+#ifdef SUPPORT_ANNOTATE
    MMAL_PARAMETER_CAMERA_ANNOTATE_V4_T annotate =
       {{MMAL_PARAMETER_ANNOTATE, sizeof(MMAL_PARAMETER_CAMERA_ANNOTATE_V4_T)}};
 
@@ -1700,6 +1701,9 @@ int raspicamcontrol_set_annotate(MMAL_COMPONENT_T *camera, const int settings, c
        annotate.enable = 0;
 
    return mmal_status_to_int(mmal_port_parameter_set(camera->control, &annotate.hdr));
+#else
+   return 0;
+#endif
 }
 
 int raspicamcontrol_set_stereo_mode(MMAL_PORT_T *port, MMAL_PARAMETER_STEREOSCOPIC_MODE_T *stereo_mode)
@@ -1749,7 +1753,7 @@ static int raspicamcontrol_get_mem_gpu(void)
 
 /**
  * Ask GPU about its camera abilities
- * @param supported None-zero if software supports the camera 
+ * @param supported None-zero if software supports the camera
  * @param detected  None-zero if a camera has been detected
  */
 static void raspicamcontrol_get_camera(int *supported, int *detected)
@@ -1766,7 +1770,7 @@ static void raspicamcontrol_get_camera(int *supported, int *detected)
 
 /**
  * Check to see if camera is supported, and we have allocated enough meooryAsk GPU about its camera abilities
- * @param supported None-zero if software supports the camera 
+ * @param supported None-zero if software supports the camera
  * @param detected  None-zero if a camera has been detected
  */
 void raspicamcontrol_check_configuration(int min_gpu_mem)
