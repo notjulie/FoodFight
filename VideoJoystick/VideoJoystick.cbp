@@ -33,6 +33,7 @@
 			<Add option="-fexceptions" />
 			<Add option="-pthread" />
 			<Add directory="/opt/vc/include" />
+			<Add directory="raspicam" />
 		</Compiler>
 		<Linker>
 			<Add option="-pthread" />
@@ -56,9 +57,6 @@
 			<Option compilerVar="CC" />
 		</Unit>
 		<Unit filename="raspicam/RaspiPreview.c">
-			<Option compilerVar="CC" />
-		</Unit>
-		<Unit filename="raspicam/RaspiVidYUV.c">
 			<Option compilerVar="CC" />
 		</Unit>
 		<Extensions>
