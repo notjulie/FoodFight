@@ -49,6 +49,7 @@
 			<Add library="/opt/vc/lib/libbcm_host.so" />
 			<Add directory="/opt/vc/lib" />
 		</Linker>
+		<Unit filename="FrameGrabber.cpp" />
 		<Unit filename="main.cpp" />
 		<Unit filename="raspicam/RaspiCLI.c">
 			<Option compilerVar="CC" />
