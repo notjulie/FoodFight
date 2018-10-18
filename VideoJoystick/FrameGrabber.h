@@ -12,7 +12,6 @@ extern "C" {
    #include "RaspiPreview.h"
 };
 
-class FrameGrabber;
 
 /// Capture/Pause switch method
 /// Simply capture for time specified
@@ -25,20 +24,6 @@ class FrameGrabber;
 #define WAIT_METHOD_SIGNAL         3
 /// Run/record forever
 #define WAIT_METHOD_FOREVER        4
-
-/** Struct used to pass information in camera video port userdata to callback
- */
-typedef struct
-{
-   FILE *file_handle;                   /// File handle to write buffer data to.
-   FrameGrabber *frameGrabber;          /// pointer to our state in case required in callback
-   int abort;                           /// Set to 1 in callback if an error occurs to attempt to abort the capture
-   FILE *pts_file_handle;               /// File timestamps
-   int frame;
-   int64_t starttime;
-   int64_t lasttime;
-} PORT_USERDATA;
-
 
 
 class FrameGrabber {
@@ -55,7 +40,6 @@ public:
    uint32_t width = 640;               /// Requested width of image
    uint32_t height = 480;              /// requested height of image
    int framerate = 90;                 /// Requested frame rate (fps)
-   char *filename = nullptr;           /// filename of output file
    int verbose = 0;                    /// !0 if want detailed run information
    int demoMode = 0;                   /// Run app in demo mode
    int demoInterval = 250;             /// Interval between camera settings changes
@@ -75,8 +59,6 @@ public:
 
    MMAL_POOL_T *camera_pool = nullptr;            /// Pointer to the pool of buffers used by camera video port
 
-   PORT_USERDATA callback_data;         /// Used to move data to the camera callback
-
    int bCapturing = 0;                      /// State of capture/pause
 
    int cameraNum = 0;                       /// Camera number
@@ -84,8 +66,6 @@ public:
    int sensor_mode = 0;                     /// Sensor mode. 0=auto. Check docs/forum for modes selected by other values.
 
    int frame = 0;
-   char *pts_filename = nullptr;
-   int save_pts = 0;
    int64_t starttime = 0;
    int64_t lasttime = 0;
 
