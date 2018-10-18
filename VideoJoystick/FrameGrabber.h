@@ -45,6 +45,11 @@ class FrameGrabber {
 public:
    FrameGrabber(void);
 
+   void EnableCameraCallback(MMAL_PORT_T *camera_video_port);
+
+private:
+   static void CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+
 public:
    int timeout = 5000;                 /// Time taken before frame is grabbed and app then shuts down. Units are milliseconds
    uint32_t width = 640;               /// Requested width of image
