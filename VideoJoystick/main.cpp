@@ -62,10 +62,6 @@ extern "C" {
 #include "FrameGrabber.h"
 
 
-// Standard port setting for the camera component
-#define MMAL_CAMERA_PREVIEW_PORT 0
-#define MMAL_CAMERA_VIDEO_PORT 1
-#define MMAL_CAMERA_CAPTURE_PORT 2
 
 // Video format information
 // 0 implies variable
@@ -1207,7 +1203,6 @@ int main(int argc, const char **argv)
 
    MMAL_STATUS_T status = MMAL_SUCCESS;
    MMAL_PORT_T *camera_preview_port = NULL;
-   MMAL_PORT_T *camera_video_port = NULL;
    MMAL_PORT_T *preview_input_port = NULL;
 
    bcm_host_init();
@@ -1264,7 +1259,6 @@ int main(int argc, const char **argv)
          fprintf(stderr, "Starting component connection stage\n");
 
       camera_preview_port = frameGrabber.camera_component->output[MMAL_CAMERA_PREVIEW_PORT];
-      camera_video_port   = frameGrabber.camera_component->output[MMAL_CAMERA_VIDEO_PORT];
       preview_input_port  = frameGrabber.preview_parameters.preview_component->input[0];
 
       if (frameGrabber.preview_parameters.wantPreview )
@@ -1335,8 +1329,6 @@ int main(int argc, const char **argv)
          frameGrabber.callback_data.pstate = &frameGrabber;
          frameGrabber.callback_data.abort = 0;
 
-         camera_video_port->userdata = (struct MMAL_PORT_USERDATA_T *)&frameGrabber.callback_data;
-
          if (frameGrabber.demoMode)
          {
             // Run for the user specific time..
@@ -1364,7 +1356,7 @@ int main(int argc, const char **argv)
                   fprintf(stderr, "Enabling camera video port\n");
 
                // Enable the camera video port and tell it its callback function
-               status = frameGrabber.SetupFrameCallback(camera_video_port);
+               status = frameGrabber.SetupFrameCallback();
 
                if (status != MMAL_SUCCESS)
                {
@@ -1383,7 +1375,7 @@ int main(int argc, const char **argv)
                      if (!buffer)
                         vcos_log_error("Unable to get a required buffer %d from pool queue", q);
 
-                     if (mmal_port_send_buffer(camera_video_port, buffer)!= MMAL_SUCCESS)
+                     if (mmal_port_send_buffer(frameGrabber.GetVideoPort(), buffer)!= MMAL_SUCCESS)
                         vcos_log_error("Unable to send a buffer to camera video port (%d)", q);
                   }
                }
@@ -1394,7 +1386,7 @@ int main(int argc, const char **argv)
 
             	   frameGrabber.bCapturing = !frameGrabber.bCapturing;
 
-                  if (mmal_port_parameter_set_boolean(camera_video_port, MMAL_PARAMETER_CAPTURE, frameGrabber.bCapturing) != MMAL_SUCCESS)
+                  if (mmal_port_parameter_set_boolean(frameGrabber.GetVideoPort(), MMAL_PARAMETER_CAPTURE, frameGrabber.bCapturing) != MMAL_SUCCESS)
                   {
                      // How to handle?
                   }
@@ -1440,7 +1432,7 @@ error:
          fprintf(stderr, "Closing down\n");
 
       // Disable all our ports that are not handled by connections
-      check_disable_port(camera_video_port);
+      check_disable_port(frameGrabber.GetVideoPort());
 
       if (frameGrabber.preview_parameters.wantPreview && frameGrabber.preview_connection)
          mmal_connection_destroy(frameGrabber.preview_connection);

@@ -12,6 +12,10 @@ extern "C" {
    #include "RaspiPreview.h"
 };
 
+// Standard port setting for the camera component
+#define MMAL_CAMERA_PREVIEW_PORT 0
+#define MMAL_CAMERA_VIDEO_PORT 1
+#define MMAL_CAMERA_CAPTURE_PORT 2
 
 /// Capture/Pause switch method
 /// Simply capture for time specified
@@ -48,7 +52,9 @@ class FrameGrabber
 {
 public:
 	FrameGrabber(void);
-	MMAL_STATUS_T SetupFrameCallback(MMAL_PORT_T *camera_video_port);
+	MMAL_STATUS_T SetupFrameCallback(void);
+
+	MMAL_PORT_T *GetVideoPort(void) { return camera_component->output[MMAL_CAMERA_VIDEO_PORT]; }
 
 private:
 	static void CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);

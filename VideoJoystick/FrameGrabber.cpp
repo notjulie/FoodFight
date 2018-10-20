@@ -8,9 +8,10 @@ FrameGrabber::FrameGrabber(void)
 {
 }
 
-MMAL_STATUS_T FrameGrabber::SetupFrameCallback(MMAL_PORT_T *camera_video_port)
+MMAL_STATUS_T FrameGrabber::SetupFrameCallback(void)
 {
-    return mmal_port_enable(camera_video_port, CameraBufferCallback);
+    GetVideoPort()->userdata = (struct MMAL_PORT_USERDATA_T *)&callback_data;
+    return mmal_port_enable(GetVideoPort(), CameraBufferCallback);
 }
 
 
