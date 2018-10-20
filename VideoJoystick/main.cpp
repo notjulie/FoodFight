@@ -1274,7 +1274,7 @@ static int wait_for_next_change(FrameGrabber *state)
 int main(int argc, const char **argv)
 {
    // Our main data storage vessel..
-   FrameGrabber state;
+   FrameGrabber frameGrabber;
    int exit_code = EX_OK;
 
    MMAL_STATUS_T status = MMAL_SUCCESS;
@@ -1292,7 +1292,7 @@ int main(int argc, const char **argv)
    // Disable USR1 for the moment - may be reenabled if go in to signal capture mode
    signal(SIGUSR1, SIG_IGN);
 
-   default_status(&state);
+   default_status(&frameGrabber);
 
    // Do we have any parameters
    if (argc == 1)
@@ -1304,54 +1304,54 @@ int main(int argc, const char **argv)
    }
 
    // Parse the command line and put options in to our status structure
-   if (parse_cmdline(argc, argv, &state))
+   if (parse_cmdline(argc, argv, &frameGrabber))
    {
       status = (MMAL_STATUS_T)-1;
       exit(EX_USAGE);
    }
 
-   if (state.verbose)
+   if (frameGrabber.verbose)
    {
       fprintf(stderr, "\n%s Camera App %s\n\n", basename(argv[0]), VERSION_STRING);
-      dump_status(&state);
+      dump_status(&frameGrabber);
    }
 
    // OK, we have a nice set of parameters. Now set up our components
    // We have two components. Camera, Preview
 
-   if ((status = create_camera_component(&state)) != MMAL_SUCCESS)
+   if ((status = create_camera_component(&frameGrabber)) != MMAL_SUCCESS)
    {
       vcos_log_error("%s: Failed to create camera component", __func__);
       exit_code = EX_SOFTWARE;
    }
-   else if ((status = raspipreview_create(&state.preview_parameters)) != MMAL_SUCCESS)
+   else if ((status = raspipreview_create(&frameGrabber.preview_parameters)) != MMAL_SUCCESS)
    {
       vcos_log_error("%s: Failed to create preview component", __func__);
-      destroy_camera_component(&state);
+      destroy_camera_component(&frameGrabber);
       exit_code = EX_SOFTWARE;
    }
    else
    {
-      if (state.verbose)
+      if (frameGrabber.verbose)
          fprintf(stderr, "Starting component connection stage\n");
 
-      camera_preview_port = state.camera_component->output[MMAL_CAMERA_PREVIEW_PORT];
-      camera_video_port   = state.camera_component->output[MMAL_CAMERA_VIDEO_PORT];
-      preview_input_port  = state.preview_parameters.preview_component->input[0];
+      camera_preview_port = frameGrabber.camera_component->output[MMAL_CAMERA_PREVIEW_PORT];
+      camera_video_port   = frameGrabber.camera_component->output[MMAL_CAMERA_VIDEO_PORT];
+      preview_input_port  = frameGrabber.preview_parameters.preview_component->input[0];
 
-      if (state.preview_parameters.wantPreview )
+      if (frameGrabber.preview_parameters.wantPreview )
       {
-         if (state.verbose)
+         if (frameGrabber.verbose)
          {
             fprintf(stderr, "Connecting camera preview port to preview input port\n");
             fprintf(stderr, "Starting video preview\n");
          }
 
          // Connect camera to preview
-         status = connect_ports(camera_preview_port, preview_input_port, &state.preview_connection);
+         status = connect_ports(camera_preview_port, preview_input_port, &frameGrabber.preview_connection);
 
          if (status != MMAL_SUCCESS)
-            state.preview_connection = NULL;
+        	 frameGrabber.preview_connection = NULL;
       }
       else
       {
@@ -1360,79 +1360,79 @@ int main(int argc, const char **argv)
 
       if (status == MMAL_SUCCESS)
       {
-         state.callback_data.file_handle = NULL;
+    	  frameGrabber.callback_data.file_handle = NULL;
 
-         if (state.filename)
+         if (frameGrabber.filename)
          {
-            if (state.filename[0] == '-')
+            if (frameGrabber.filename[0] == '-')
             {
-               state.callback_data.file_handle = stdout;
+            	frameGrabber.callback_data.file_handle = stdout;
             }
             else
             {
-               state.callback_data.file_handle = open_filename(&state, state.filename);
+            	frameGrabber.callback_data.file_handle = open_filename(&frameGrabber, frameGrabber.filename);
             }
 
-            if (!state.callback_data.file_handle)
+            if (!frameGrabber.callback_data.file_handle)
             {
                // Notify user, carry on but discarding output buffers
-               vcos_log_error("%s: Error opening output file: %s\nNo output file will be generated\n", __func__, state.filename);
+               vcos_log_error("%s: Error opening output file: %s\nNo output file will be generated\n", __func__, frameGrabber.filename);
             }
          }
 
-         state.callback_data.pts_file_handle = NULL;
+         frameGrabber.callback_data.pts_file_handle = NULL;
 
-         if (state.pts_filename)
+         if (frameGrabber.pts_filename)
          {
-            if (state.pts_filename[0] == '-')
+            if (frameGrabber.pts_filename[0] == '-')
             {
-               state.callback_data.pts_file_handle = stdout;
+            	frameGrabber.callback_data.pts_file_handle = stdout;
             }
             else
             {
-               state.callback_data.pts_file_handle = open_filename(&state, state.pts_filename);
-               if (state.callback_data.pts_file_handle) /* save header for mkvmerge */
-                  fprintf(state.callback_data.pts_file_handle, "# timecode format v2\n");
+            	frameGrabber.callback_data.pts_file_handle = open_filename(&frameGrabber, frameGrabber.pts_filename);
+               if (frameGrabber.callback_data.pts_file_handle) /* save header for mkvmerge */
+                  fprintf(frameGrabber.callback_data.pts_file_handle, "# timecode format v2\n");
             }
 
-            if (!state.callback_data.pts_file_handle)
+            if (!frameGrabber.callback_data.pts_file_handle)
             {
                // Notify user, carry on but discarding encoded output buffers
-               fprintf(stderr, "Error opening output file: %s\nNo output file will be generated\n",state.pts_filename);
-               state.save_pts=0;
+               fprintf(stderr, "Error opening output file: %s\nNo output file will be generated\n",frameGrabber.pts_filename);
+               frameGrabber.save_pts=0;
             }
          }
 
          // Set up our userdata - this is passed though to the callback where we need the information.
-         state.callback_data.pstate = &state;
-         state.callback_data.abort = 0;
+         frameGrabber.callback_data.pstate = &frameGrabber;
+         frameGrabber.callback_data.abort = 0;
 
-         camera_video_port->userdata = (struct MMAL_PORT_USERDATA_T *)&state.callback_data;
+         camera_video_port->userdata = (struct MMAL_PORT_USERDATA_T *)&frameGrabber.callback_data;
 
-         if (state.demoMode)
+         if (frameGrabber.demoMode)
          {
             // Run for the user specific time..
-            int num_iterations = state.timeout / state.demoInterval;
+            int num_iterations = frameGrabber.timeout / frameGrabber.demoInterval;
             int i;
 
-            if (state.verbose)
+            if (frameGrabber.verbose)
                fprintf(stderr, "Running in demo mode\n");
 
-            for (i=0;state.timeout == 0 || i<num_iterations;i++)
+            for (i=0;frameGrabber.timeout == 0 || i<num_iterations;i++)
             {
-               raspicamcontrol_cycle_test(state.camera_component);
-               vcos_sleep(state.demoInterval);
+               raspicamcontrol_cycle_test(frameGrabber.camera_component);
+               vcos_sleep(frameGrabber.demoInterval);
             }
          }
          else
          {
             // Only save stuff if we have a filename and it opened
             // Note we use the file handle copy in the callback, as the call back MIGHT change the file handle
-            if (state.callback_data.file_handle)
+            if (frameGrabber.callback_data.file_handle)
             {
                int running = 1;
 
-               if (state.verbose)
+               if (frameGrabber.verbose)
                   fprintf(stderr, "Enabling camera video port\n");
 
                // Enable the camera video port and tell it its callback function
@@ -1446,11 +1446,11 @@ int main(int argc, const char **argv)
 
                // Send all the buffers to the camera video port
                {
-                  int num = mmal_queue_length(state.camera_pool->queue);
+                  int num = mmal_queue_length(frameGrabber.camera_pool->queue);
                   int q;
                   for (q=0;q<num;q++)
                   {
-                     MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(state.camera_pool->queue);
+                     MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(frameGrabber.camera_pool->queue);
 
                      if (!buffer)
                         vcos_log_error("Unable to get a required buffer %d from pool queue", q);
@@ -1464,31 +1464,31 @@ int main(int argc, const char **argv)
                {
                   // Change state
 
-                  state.bCapturing = !state.bCapturing;
+            	   frameGrabber.bCapturing = !frameGrabber.bCapturing;
 
-                  if (mmal_port_parameter_set_boolean(camera_video_port, MMAL_PARAMETER_CAPTURE, state.bCapturing) != MMAL_SUCCESS)
+                  if (mmal_port_parameter_set_boolean(camera_video_port, MMAL_PARAMETER_CAPTURE, frameGrabber.bCapturing) != MMAL_SUCCESS)
                   {
                      // How to handle?
                   }
 
-                  if (state.verbose)
+                  if (frameGrabber.verbose)
                   {
-                     if (state.bCapturing)
+                     if (frameGrabber.bCapturing)
                         fprintf(stderr, "Starting video capture\n");
                      else
                         fprintf(stderr, "Pausing video capture\n");
                   }
 
-                  running = wait_for_next_change(&state);
+                  running = wait_for_next_change(&frameGrabber);
                }
 
-               if (state.verbose)
+               if (frameGrabber.verbose)
                   fprintf(stderr, "Finished capture\n");
             }
             else
             {
-               if (state.timeout)
-                  vcos_sleep(state.timeout);
+               if (frameGrabber.timeout)
+                  vcos_sleep(frameGrabber.timeout);
                else
                {
                   // timeout = 0 so run forever
@@ -1508,32 +1508,32 @@ error:
 
       mmal_status_to_int(status);
 
-      if (state.verbose)
+      if (frameGrabber.verbose)
          fprintf(stderr, "Closing down\n");
 
       // Disable all our ports that are not handled by connections
       check_disable_port(camera_video_port);
 
-      if (state.preview_parameters.wantPreview && state.preview_connection)
-         mmal_connection_destroy(state.preview_connection);
+      if (frameGrabber.preview_parameters.wantPreview && frameGrabber.preview_connection)
+         mmal_connection_destroy(frameGrabber.preview_connection);
 
-      if (state.preview_parameters.preview_component)
-         mmal_component_disable(state.preview_parameters.preview_component);
+      if (frameGrabber.preview_parameters.preview_component)
+         mmal_component_disable(frameGrabber.preview_parameters.preview_component);
 
-      if (state.camera_component)
-         mmal_component_disable(state.camera_component);
+      if (frameGrabber.camera_component)
+         mmal_component_disable(frameGrabber.camera_component);
 
       // Can now close our file. Note disabling ports may flush buffers which causes
       // problems if we have already closed the file!
-      if (state.callback_data.file_handle && state.callback_data.file_handle != stdout)
-         fclose(state.callback_data.file_handle);
-      if (state.callback_data.pts_file_handle && state.callback_data.pts_file_handle != stdout)
-         fclose(state.callback_data.pts_file_handle);
+      if (frameGrabber.callback_data.file_handle && frameGrabber.callback_data.file_handle != stdout)
+         fclose(frameGrabber.callback_data.file_handle);
+      if (frameGrabber.callback_data.pts_file_handle && frameGrabber.callback_data.pts_file_handle != stdout)
+         fclose(frameGrabber.callback_data.pts_file_handle);
 
-      raspipreview_destroy(&state.preview_parameters);
-      destroy_camera_component(&state);
+      raspipreview_destroy(&frameGrabber.preview_parameters);
+      destroy_camera_component(&frameGrabber);
 
-      if (state.verbose)
+      if (frameGrabber.verbose)
          fprintf(stderr, "Close down completed, all components disconnected, disabled and destroyed\n\n");
    }
 
