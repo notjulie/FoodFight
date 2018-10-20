@@ -26,51 +26,68 @@ extern "C" {
 #define WAIT_METHOD_FOREVER        4
 
 
-class FrameGrabber {
+// Forward
+class FrameGrabber;
+
+/** Struct used to pass information in camera video port userdata to callback
+ */
+typedef struct
+{
+   FILE *file_handle;                   /// File handle to write buffer data to.
+   FrameGrabber *pstate;           /// pointer to our state in case required in callback
+   int abort;                           /// Set to 1 in callback if an error occurs to attempt to abort the capture
+   FILE *pts_file_handle;               /// File timestamps
+   int frame;
+   int64_t starttime;
+   int64_t lasttime;
+} PORT_USERDATA;
+
+/** Structure containing all state information for the current run
+ */
+class FrameGrabber
+{
 public:
-   FrameGrabber(void);
+   int timeout;                        /// Time taken before frame is grabbed and app then shuts down. Units are milliseconds
+   uint32_t width;                          /// Requested width of image
+   uint32_t height;                         /// requested height of image
+   int framerate;                      /// Requested frame rate (fps)
+   char *filename;                     /// filename of output file
+   int verbose;                        /// !0 if want detailed run information
+   int demoMode;                       /// Run app in demo mode
+   int demoInterval;                   /// Interval between camera settings changes
+   int waitMethod;                     /// Method for switching between pause and capture
 
-   void EnableCameraCallback(MMAL_PORT_T *camera_video_port);
+   int onTime;                         /// In timed cycle mode, the amount of time the capture is on per cycle
+   int offTime;                        /// In timed cycle mode, the amount of time the capture is off per cycle
 
-private:
-   static void CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
-
-public:
-   int timeout = 5000;                 /// Time taken before frame is grabbed and app then shuts down. Units are milliseconds
-   uint32_t width = 640;               /// Requested width of image
-   uint32_t height = 480;              /// requested height of image
-   int framerate = 30;                 /// Requested frame rate (fps)
-   int verbose = 0;                    /// !0 if want detailed run information
-   int demoMode = 0;                   /// Run app in demo mode
-   int demoInterval = 250;             /// Interval between camera settings changes
-   int waitMethod = WAIT_METHOD_NONE;  /// Method for switching between pause and capture
-
-   int onTime = 5000;                  /// In timed cycle mode, the amount of time the capture is on per cycle
-   int offTime = 5000;                 /// In timed cycle mode, the amount of time the capture is off per cycle
-
-   int onlyLuma = 0;                   /// Only output the luma / Y plane of the YUV data
-   int useRGB = 1;                     /// Output RGB data rather than YUV
+   int onlyLuma;                       /// Only output the luma / Y plane of the YUV data
+   int useRGB;                         /// Output RGB data rather than YUV
 
    RASPIPREVIEW_PARAMETERS preview_parameters;   /// Preview setup parameters
    RASPICAM_CAMERA_PARAMETERS camera_parameters; /// Camera setup parameters
 
-   MMAL_COMPONENT_T *camera_component = nullptr;    /// Pointer to the camera component
-   MMAL_CONNECTION_T *preview_connection = nullptr; /// Pointer to the connection from camera to preview
+   MMAL_COMPONENT_T *camera_component;    /// Pointer to the camera component
+   MMAL_CONNECTION_T *preview_connection; /// Pointer to the connection from camera to preview
 
-   MMAL_POOL_T *camera_pool = nullptr;            /// Pointer to the pool of buffers used by camera video port
+   MMAL_POOL_T *camera_pool;            /// Pointer to the pool of buffers used by camera video port
 
-   int bCapturing = 0;                      /// State of capture/pause
+   PORT_USERDATA callback_data;         /// Used to move data to the camera callback
 
-   int cameraNum = 0;                       /// Camera number
-   int settings = 0;                        /// Request settings from the camera
-   int sensor_mode = 0;                     /// Sensor mode. 0=auto. Check docs/forum for modes selected by other values.
+   int bCapturing;                      /// State of capture/pause
 
-   int frame = 0;
-   int64_t starttime = 0;
-   int64_t lasttime = 0;
+   int cameraNum;                       /// Camera number
+   int settings;                        /// Request settings from the camera
+   int sensor_mode;                     /// Sensor mode. 0=auto. Check docs/forum for modes selected by other values.
 
-   bool netListen = 0;
+   int frame;
+   char *pts_filename;
+   int save_pts;
+   int64_t starttime;
+   int64_t lasttime;
+
+   bool netListen;
 };
+
 
 
 #endif

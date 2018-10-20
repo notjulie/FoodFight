@@ -59,6 +59,8 @@ extern "C" {
 };
 
 #include <semaphore.h>
+#include "FrameGrabber.h"
+
 
 // Standard port setting for the camera component
 #define MMAL_CAMERA_PREVIEW_PORT 0
@@ -77,82 +79,9 @@ extern "C" {
 const int ABORT_INTERVAL = 100; // ms
 
 
-/// Capture/Pause switch method
-/// Simply capture for time specified
-#define WAIT_METHOD_NONE           0
-/// Cycle between capture and pause for times specified
-#define WAIT_METHOD_TIMED          1
-/// Switch between capture and pause on keypress
-#define WAIT_METHOD_KEYPRESS       2
-/// Switch between capture and pause on signal
-#define WAIT_METHOD_SIGNAL         3
-/// Run/record forever
-#define WAIT_METHOD_FOREVER        4
-
 extern "C" {
    int mmal_status_to_int(MMAL_STATUS_T status);
    static void signal_handler(int signal_number);
-};
-
-// Forward
-typedef struct RASPIVIDYUV_STATE_S RASPIVIDYUV_STATE;
-
-/** Struct used to pass information in camera video port userdata to callback
- */
-typedef struct
-{
-   FILE *file_handle;                   /// File handle to write buffer data to.
-   RASPIVIDYUV_STATE *pstate;           /// pointer to our state in case required in callback
-   int abort;                           /// Set to 1 in callback if an error occurs to attempt to abort the capture
-   FILE *pts_file_handle;               /// File timestamps
-   int frame;
-   int64_t starttime;
-   int64_t lasttime;
-} PORT_USERDATA;
-
-/** Structure containing all state information for the current run
- */
-struct RASPIVIDYUV_STATE_S
-{
-   int timeout;                        /// Time taken before frame is grabbed and app then shuts down. Units are milliseconds
-   uint32_t width;                          /// Requested width of image
-   uint32_t height;                         /// requested height of image
-   int framerate;                      /// Requested frame rate (fps)
-   char *filename;                     /// filename of output file
-   int verbose;                        /// !0 if want detailed run information
-   int demoMode;                       /// Run app in demo mode
-   int demoInterval;                   /// Interval between camera settings changes
-   int waitMethod;                     /// Method for switching between pause and capture
-
-   int onTime;                         /// In timed cycle mode, the amount of time the capture is on per cycle
-   int offTime;                        /// In timed cycle mode, the amount of time the capture is off per cycle
-
-   int onlyLuma;                       /// Only output the luma / Y plane of the YUV data
-   int useRGB;                         /// Output RGB data rather than YUV
-
-   RASPIPREVIEW_PARAMETERS preview_parameters;   /// Preview setup parameters
-   RASPICAM_CAMERA_PARAMETERS camera_parameters; /// Camera setup parameters
-
-   MMAL_COMPONENT_T *camera_component;    /// Pointer to the camera component
-   MMAL_CONNECTION_T *preview_connection; /// Pointer to the connection from camera to preview
-
-   MMAL_POOL_T *camera_pool;            /// Pointer to the pool of buffers used by camera video port
-
-   PORT_USERDATA callback_data;         /// Used to move data to the camera callback
-
-   int bCapturing;                      /// State of capture/pause
-
-   int cameraNum;                       /// Camera number
-   int settings;                        /// Request settings from the camera
-   int sensor_mode;                     /// Sensor mode. 0=auto. Check docs/forum for modes selected by other values.
-
-   int frame;
-   char *pts_filename;
-   int save_pts;
-   int64_t starttime;
-   int64_t lasttime;
-
-   bool netListen;
 };
 
 static XREF_T  initial_map[] =
@@ -235,7 +164,7 @@ static int wait_method_description_size = sizeof(wait_method_description) / size
  *
  * @param state Pointer to state structure to assign defaults to
  */
-static void default_status(RASPIVIDYUV_STATE *state)
+static void default_status(FrameGrabber *state)
 {
    if (!state)
    {
@@ -244,7 +173,7 @@ static void default_status(RASPIVIDYUV_STATE *state)
    }
 
    // Default everything to zero
-   memset(state, 0, sizeof(RASPIVIDYUV_STATE));
+   memset(state, 0, sizeof(FrameGrabber));
 
    // Now set anything non-zero
    state->timeout = 5000;     // 5s delay before take image
@@ -277,7 +206,7 @@ static void default_status(RASPIVIDYUV_STATE *state)
  *
  * @param state Pointer to state structure to assign defaults to
  */
-static void dump_status(RASPIVIDYUV_STATE *state)
+static void dump_status(FrameGrabber *state)
 {
    int i, size, ystride, yheight;
 
@@ -326,7 +255,7 @@ static void dump_status(RASPIVIDYUV_STATE *state)
  * @param state Pointer to state structure to assign any discovered parameters to
  * @return Non-0 if failed for some reason, 0 otherwise
  */
-static int parse_cmdline(int argc, const char **argv, RASPIVIDYUV_STATE *state)
+static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
 {
    // Parse the command line arguments.
    // We are looking for --<something> or -<abbreviation of something>
@@ -674,7 +603,7 @@ static void camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
  *
  * @param state Pointer to state
  */
-static FILE *open_filename(RASPIVIDYUV_STATE *pState, char *filename)
+static FILE *open_filename(FrameGrabber *pState, char *filename)
 {
    FILE *new_handle = NULL;
 
@@ -901,7 +830,7 @@ static void camera_buffer_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buff
  * @return MMAL_SUCCESS if all OK, something else otherwise
  *
  */
-static MMAL_STATUS_T create_camera_component(RASPIVIDYUV_STATE *state)
+static MMAL_STATUS_T create_camera_component(FrameGrabber *state)
 {
    MMAL_COMPONENT_T *camera = 0;
    MMAL_STATUS_T status;
@@ -1144,7 +1073,7 @@ static MMAL_STATUS_T create_camera_component(RASPIVIDYUV_STATE *state)
  * @param state Pointer to state control struct
  *
  */
-static void destroy_camera_component(RASPIVIDYUV_STATE *state)
+static void destroy_camera_component(FrameGrabber *state)
 {
    if (state->camera_component)
    {
@@ -1221,7 +1150,7 @@ static void signal_handler(int signal_number)
  * @param callback Struct contain an abort flag tested for early termination
  *
  */
-static int pause_and_test_abort(RASPIVIDYUV_STATE *state, int pause)
+static int pause_and_test_abort(FrameGrabber *state, int pause)
 {
    int wait;
 
@@ -1247,7 +1176,7 @@ static int pause_and_test_abort(RASPIVIDYUV_STATE *state, int pause)
  *
  * @return !0 if to continue, 0 if reached end of run
  */
-static int wait_for_next_change(RASPIVIDYUV_STATE *state)
+static int wait_for_next_change(FrameGrabber *state)
 {
    int keep_running = 1;
    static int64_t complete_time = -1;
@@ -1345,7 +1274,7 @@ static int wait_for_next_change(RASPIVIDYUV_STATE *state)
 int main(int argc, const char **argv)
 {
    // Our main data storage vessel..
-   RASPIVIDYUV_STATE state = {0};
+   FrameGrabber state;
    int exit_code = EX_OK;
 
    MMAL_STATUS_T status = MMAL_SUCCESS;
