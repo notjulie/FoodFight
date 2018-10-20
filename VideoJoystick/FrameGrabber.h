@@ -12,6 +12,8 @@ extern "C" {
    #include "RaspiPreview.h"
 };
 
+#include "FrameHandler.h"
+
 // Standard port setting for the camera component
 #define MMAL_CAMERA_PREVIEW_PORT 0
 #define MMAL_CAMERA_VIDEO_PORT 1
@@ -29,22 +31,6 @@ extern "C" {
 /// Run/record forever
 #define WAIT_METHOD_FOREVER        4
 
-
-// Forward
-class FrameGrabber;
-
-/** Struct used to pass information in camera video port userdata to callback
- */
-typedef struct
-{
-   FILE *file_handle;                   /// File handle to write buffer data to.
-   FrameGrabber *pstate;           /// pointer to our state in case required in callback
-   int abort;                           /// Set to 1 in callback if an error occurs to attempt to abort the capture
-   FILE *pts_file_handle;               /// File timestamps
-   int frame;
-   int64_t starttime;
-   int64_t lasttime;
-} PORT_USERDATA;
 
 /** Structure containing all state information for the current run
  */
@@ -87,7 +73,7 @@ public:
 
    MMAL_POOL_T *camera_pool;            /// Pointer to the pool of buffers used by camera video port
 
-   PORT_USERDATA callback_data;         /// Used to move data to the camera callback
+   FrameHandler callback_data;         /// Used to move data to the camera callback
 
    int bCapturing;                      /// State of capture/pause
 

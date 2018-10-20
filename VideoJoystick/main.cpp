@@ -1326,7 +1326,6 @@ int main(int argc, const char **argv)
          }
 
          // Set up our userdata - this is passed though to the callback where we need the information.
-         frameGrabber.callback_data.pstate = &frameGrabber;
          frameGrabber.callback_data.abort = 0;
 
          if (frameGrabber.demoMode)
