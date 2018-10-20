@@ -47,6 +47,13 @@ typedef struct
 class FrameGrabber
 {
 public:
+	FrameGrabber(void);
+	MMAL_STATUS_T SetupFrameCallback(MMAL_PORT_T *camera_video_port);
+
+private:
+	static void CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+
+public:
    int timeout;                        /// Time taken before frame is grabbed and app then shuts down. Units are milliseconds
    uint32_t width;                          /// Requested width of image
    uint32_t height;                         /// requested height of image
