@@ -1074,7 +1074,7 @@ static void signal_handler(int signal_number)
  * @param callback Struct contain an abort flag tested for early termination
  *
  */
-static int pause_and_test_abort(FrameGrabber *state, int pause)
+static int pause_and_test_abort(FrameHandler *frameHandler, int pause)
 {
    int wait;
 
@@ -1085,7 +1085,7 @@ static int pause_and_test_abort(FrameGrabber *state, int pause)
    for (wait = 0; wait < pause; wait+= ABORT_INTERVAL)
    {
       vcos_sleep(ABORT_INTERVAL);
-      if (state->callback_data.abort)
+      if (frameHandler->abort)
          return 1;
    }
 
@@ -1100,7 +1100,7 @@ static int pause_and_test_abort(FrameGrabber *state, int pause)
  *
  * @return !0 if to continue, 0 if reached end of run
  */
-static int wait_for_next_change(FrameGrabber *state)
+static int wait_for_next_change(FrameGrabber *state, FrameHandler *frameHandler)
 {
    int keep_running = 1;
    static int64_t complete_time = -1;
@@ -1118,7 +1118,7 @@ static int wait_for_next_change(FrameGrabber *state)
    switch (state->waitMethod)
    {
    case WAIT_METHOD_NONE:
-      (void)pause_and_test_abort(state, state->timeout);
+      (void)pause_and_test_abort(frameHandler, state->timeout);
       return 0;
 
    case WAIT_METHOD_FOREVER:
@@ -1136,9 +1136,9 @@ static int wait_for_next_change(FrameGrabber *state)
       int abort;
 
       if (state->bCapturing)
-         abort = pause_and_test_abort(state, state->onTime);
+         abort = pause_and_test_abort(frameHandler, state->onTime);
       else
-         abort = pause_and_test_abort(state, state->offTime);
+         abort = pause_and_test_abort(frameHandler, state->offTime);
 
       if (abort)
          return 0;
@@ -1197,8 +1197,9 @@ static int wait_for_next_change(FrameGrabber *state)
  */
 int main(int argc, const char **argv)
 {
-   // Our main data storage vessel..
+   // Our main objects..
    FrameGrabber frameGrabber;
+   FrameHandler frameHandler;
    int exit_code = EX_OK;
 
    MMAL_STATUS_T status = MMAL_SUCCESS;
@@ -1282,42 +1283,42 @@ int main(int argc, const char **argv)
 
       if (status == MMAL_SUCCESS)
       {
-    	  frameGrabber.callback_data.file_handle = NULL;
+    	  frameHandler.file_handle = NULL;
 
          if (frameGrabber.filename)
          {
             if (frameGrabber.filename[0] == '-')
             {
-            	frameGrabber.callback_data.file_handle = stdout;
+            	frameHandler.file_handle = stdout;
             }
             else
             {
-            	frameGrabber.callback_data.file_handle = open_filename(&frameGrabber, frameGrabber.filename);
+            	frameHandler.file_handle = open_filename(&frameGrabber, frameGrabber.filename);
             }
 
-            if (!frameGrabber.callback_data.file_handle)
+            if (!frameHandler.file_handle)
             {
                // Notify user, carry on but discarding output buffers
                vcos_log_error("%s: Error opening output file: %s\nNo output file will be generated\n", __func__, frameGrabber.filename);
             }
          }
 
-         frameGrabber.callback_data.pts_file_handle = NULL;
+         frameHandler.pts_file_handle = NULL;
 
          if (frameGrabber.pts_filename)
          {
             if (frameGrabber.pts_filename[0] == '-')
             {
-            	frameGrabber.callback_data.pts_file_handle = stdout;
+            	frameHandler.pts_file_handle = stdout;
             }
             else
             {
-            	frameGrabber.callback_data.pts_file_handle = open_filename(&frameGrabber, frameGrabber.pts_filename);
-               if (frameGrabber.callback_data.pts_file_handle) /* save header for mkvmerge */
-                  fprintf(frameGrabber.callback_data.pts_file_handle, "# timecode format v2\n");
+            	frameHandler.pts_file_handle = open_filename(&frameGrabber, frameGrabber.pts_filename);
+               if (frameHandler.pts_file_handle) /* save header for mkvmerge */
+                  fprintf(frameHandler.pts_file_handle, "# timecode format v2\n");
             }
 
-            if (!frameGrabber.callback_data.pts_file_handle)
+            if (!frameHandler.pts_file_handle)
             {
                // Notify user, carry on but discarding encoded output buffers
                fprintf(stderr, "Error opening output file: %s\nNo output file will be generated\n",frameGrabber.pts_filename);
@@ -1326,7 +1327,7 @@ int main(int argc, const char **argv)
          }
 
          // Set up our userdata - this is passed though to the callback where we need the information.
-         frameGrabber.callback_data.abort = 0;
+         frameHandler.abort = 0;
 
          if (frameGrabber.demoMode)
          {
@@ -1347,7 +1348,7 @@ int main(int argc, const char **argv)
          {
             // Only save stuff if we have a filename and it opened
             // Note we use the file handle copy in the callback, as the call back MIGHT change the file handle
-            if (frameGrabber.callback_data.file_handle)
+            if (frameHandler.file_handle)
             {
                int running = 1;
 
@@ -1355,7 +1356,7 @@ int main(int argc, const char **argv)
                   fprintf(stderr, "Enabling camera video port\n");
 
                // Enable the camera video port and tell it its callback function
-               status = frameGrabber.SetupFrameCallback();
+               status = frameGrabber.SetupFrameCallback(&frameHandler);
 
                if (status != MMAL_SUCCESS)
                {
@@ -1398,7 +1399,7 @@ int main(int argc, const char **argv)
                         fprintf(stderr, "Pausing video capture\n");
                   }
 
-                  running = wait_for_next_change(&frameGrabber);
+                  running = wait_for_next_change(&frameGrabber, &frameHandler);
                }
 
                if (frameGrabber.verbose)
@@ -1444,10 +1445,10 @@ error:
 
       // Can now close our file. Note disabling ports may flush buffers which causes
       // problems if we have already closed the file!
-      if (frameGrabber.callback_data.file_handle && frameGrabber.callback_data.file_handle != stdout)
-         fclose(frameGrabber.callback_data.file_handle);
-      if (frameGrabber.callback_data.pts_file_handle && frameGrabber.callback_data.pts_file_handle != stdout)
-         fclose(frameGrabber.callback_data.pts_file_handle);
+      if (frameHandler.file_handle && frameHandler.file_handle != stdout)
+         fclose(frameHandler.file_handle);
+      if (frameHandler.pts_file_handle && frameHandler.pts_file_handle != stdout)
+         fclose(frameHandler.pts_file_handle);
 
       raspipreview_destroy(&frameGrabber.preview_parameters);
       destroy_camera_component(&frameGrabber);

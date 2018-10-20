@@ -8,8 +8,9 @@ FrameGrabber::FrameGrabber(void)
 {
 }
 
-MMAL_STATUS_T FrameGrabber::SetupFrameCallback(void)
+MMAL_STATUS_T FrameGrabber::SetupFrameCallback(FrameHandler *frameHandler)
 {
+	this->frameHandler = frameHandler;
 	GetVideoPort()->userdata = (struct MMAL_PORT_USERDATA_T *)this;
     return mmal_port_enable(GetVideoPort(), CameraBufferCallbackEntry);
 }
@@ -33,20 +34,20 @@ void FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T 
 	if (onlyLuma)
 	 bytes_to_write = vcos_min(buffer->length, port->format->es->video.width * port->format->es->video.height);
 
-	vcos_assert(callback_data.file_handle);
+	vcos_assert(frameHandler->file_handle);
 
 	if (bytes_to_write)
 	{
 	 mmal_buffer_header_mem_lock(buffer);
-	 bytes_written = fwrite(buffer->data, 1, bytes_to_write, callback_data.file_handle);
+	 bytes_written = fwrite(buffer->data, 1, bytes_to_write, frameHandler->file_handle);
 	 mmal_buffer_header_mem_unlock(buffer);
 
 	 if (bytes_written != bytes_to_write)
 	 {
 		vcos_log_error("Failed to write buffer data (%d from %d)- aborting", bytes_written, bytes_to_write);
-		callback_data.abort = 1;
+		frameHandler->abort = 1;
 	 }
-	 if (callback_data.pts_file_handle)
+	 if (frameHandler->pts_file_handle)
 	 {
 		// Every buffer should be a complete frame, so no need to worry about
 		// fragments or duplicated timestamps. We're also in RESET_STC mode, so
@@ -59,10 +60,10 @@ void FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T 
 		   int64_t pts;
 		   if(frame==0)
 			  starttime=buffer->pts;
-		   callback_data.lasttime=buffer->pts;
-		   pts = buffer->pts - callback_data.starttime;
-		   fprintf(callback_data.pts_file_handle,"%lld.%03lld\n", pts/1000, pts%1000);
-		   callback_data.frame++;
+		   frameHandler->lasttime=buffer->pts;
+		   pts = buffer->pts - frameHandler->starttime;
+		   fprintf(frameHandler->pts_file_handle,"%lld.%03lld\n", pts/1000, pts%1000);
+		   frameHandler->frame++;
 		}
 	 }
 	}

@@ -38,7 +38,7 @@ class FrameGrabber
 {
 public:
 	FrameGrabber(void);
-	MMAL_STATUS_T SetupFrameCallback(void);
+	MMAL_STATUS_T SetupFrameCallback(FrameHandler *frameHandler);
 
 	MMAL_PORT_T *GetVideoPort(void) { return camera_component->output[MMAL_CAMERA_VIDEO_PORT]; }
 
@@ -73,8 +73,6 @@ public:
 
    MMAL_POOL_T *camera_pool;            /// Pointer to the pool of buffers used by camera video port
 
-   FrameHandler callback_data;         /// Used to move data to the camera callback
-
    int bCapturing;                      /// State of capture/pause
 
    int cameraNum;                       /// Camera number
@@ -88,6 +86,9 @@ public:
    int64_t lasttime;
 
    bool netListen;
+
+private:
+   FrameHandler *frameHandler;         /// Used to move data to the camera callback
 };
 
 
