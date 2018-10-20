@@ -39,7 +39,7 @@ public:
    int timeout = 5000;                 /// Time taken before frame is grabbed and app then shuts down. Units are milliseconds
    uint32_t width = 640;               /// Requested width of image
    uint32_t height = 480;              /// requested height of image
-   int framerate = 90;                 /// Requested frame rate (fps)
+   int framerate = 30;                 /// Requested frame rate (fps)
    int verbose = 0;                    /// !0 if want detailed run information
    int demoMode = 0;                   /// Run app in demo mode
    int demoInterval = 250;             /// Interval between camera settings changes

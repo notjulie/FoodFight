@@ -45,6 +45,20 @@ void FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T 
          // Do something with the data here
          char bleem[3000];
          memcpy(bleem, buffer->data, 3000);
+
+         // hack for now
+         static int frameNumber = 0;
+         if (++frameNumber == 3)
+         {
+        	 FILE *f = fopen("bleem.rgb", "wb");
+        	 if (f != nullptr)
+        	 {
+        		 fwrite(buffer->data, 1, bytes_to_write, f);
+        		 fclose(f);
+        	 }
+         }
+
+
          //bytes_written = fwrite(buffer->data, 1, bytes_to_write, pData->file_handle);
          mmal_buffer_header_mem_unlock(buffer);
 
