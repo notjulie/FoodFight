@@ -9,21 +9,18 @@
 #define FRAMEHANDLER_H_
 
 #include <stdio.h>
-#include "interface/mmal/mmal.h"
+#include <memory>
+#include "VideoFrame.h"
 
 class FrameHandler
 {
 public:
 	FrameHandler(void);
-	void HandleFrame(MMAL_BUFFER_HEADER_T *frame);
+	void HandleFrame(std::shared_ptr<VideoFrame> &frame);
 
 public:
-	FILE *file_handle;                   /// File handle to write buffer data to.
-	int abort;                           /// Set to 1 in callback if an error occurs to attempt to abort the capture
-	FILE *pts_file_handle;               /// File timestamps
-	int frame;
-	int64_t starttime;
-	int64_t lasttime;
+	FILE *file_handle = nullptr;                   /// File handle to write buffer data to.
+	int abort = 0;                           /// Set to 1 in callback if an error occurs to attempt to abort the capture
 };
 
 

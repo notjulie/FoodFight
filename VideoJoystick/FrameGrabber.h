@@ -79,8 +79,6 @@ public:
    int sensor_mode;                     /// Sensor mode. 0=auto. Check docs/forum for modes selected by other values.
 
    int frame;
-   char *pts_filename;
-   int save_pts;
    int64_t starttime;
    int64_t lasttime;
 

@@ -108,7 +108,6 @@ static void display_valid_parameters(const char *app_name);
 #define CommandSettings     13
 #define CommandSensorMode   14
 #define CommandUseRGB       16
-#define CommandSavePTS      17
 #define CommandNetListen    18
 
 static COMMAND_LIST cmdline_commands[] =
@@ -129,7 +128,6 @@ static COMMAND_LIST cmdline_commands[] =
    { CommandSettings,      "-settings",   "set","Retrieve camera settings and write to stdout", 0},
    { CommandSensorMode,    "-mode",       "md", "Force sensor mode. 0=auto. See docs for other modes available", 1},
    { CommandUseRGB,        "-rgb",        "rgb","Save as RGB data rather than YUV", 0},
-   { CommandSavePTS,       "-save-pts",   "pts","Save Timestamps to file", 1 },
    { CommandNetListen,     "-listen",     "l", "Listen on a TCP socket", 0},
 };
 
@@ -441,23 +439,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
       case CommandUseRGB: // display lots of data during run
          state->useRGB = 1;
          break;
-
-      case CommandSavePTS:  // output filename
-      {
-         state->save_pts = 1;
-         int len = strlen(argv[i + 1]);
-         if (len)
-         {
-            state->pts_filename = (char *)malloc(len + 1);
-            vcos_assert(state->pts_filename);
-            if (state->pts_filename)
-               strncpy(state->pts_filename, argv[i + 1], len+1);
-            i++;
-         }
-         else
-            valid = 0;
-         break;
-      }
 
       case CommandNetListen:
       {
@@ -1286,29 +1267,6 @@ int main(int argc, const char **argv)
             }
          }
 
-         frameHandler.pts_file_handle = NULL;
-
-         if (frameGrabber.pts_filename)
-         {
-            if (frameGrabber.pts_filename[0] == '-')
-            {
-            	frameHandler.pts_file_handle = stdout;
-            }
-            else
-            {
-            	frameHandler.pts_file_handle = open_filename(&frameGrabber, frameGrabber.pts_filename);
-               if (frameHandler.pts_file_handle) /* save header for mkvmerge */
-                  fprintf(frameHandler.pts_file_handle, "# timecode format v2\n");
-            }
-
-            if (!frameHandler.pts_file_handle)
-            {
-               // Notify user, carry on but discarding encoded output buffers
-               fprintf(stderr, "Error opening output file: %s\nNo output file will be generated\n",frameGrabber.pts_filename);
-               frameGrabber.save_pts=0;
-            }
-         }
-
          // Set up our userdata - this is passed though to the callback where we need the information.
          frameHandler.abort = 0;
 
@@ -1430,8 +1388,6 @@ error:
       // problems if we have already closed the file!
       if (frameHandler.file_handle && frameHandler.file_handle != stdout)
          fclose(frameHandler.file_handle);
-      if (frameHandler.pts_file_handle && frameHandler.pts_file_handle != stdout)
-         fclose(frameHandler.pts_file_handle);
 
       raspipreview_destroy(&frameGrabber.preview_parameters);
       destroy_camera_component(&frameGrabber);

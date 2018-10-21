@@ -25,10 +25,13 @@ void FrameGrabber::CameraBufferCallbackEntry(MMAL_PORT_T *port, MMAL_BUFFER_HEAD
 
 void FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
+	// create a VideoFrame from the buffer; this way the frame handler can do whatever
+	// it wants, including processing it later on a different thread if it so desires
+	std::shared_ptr<VideoFrame> frame;
+	frame.reset(new VideoFrame(buffer));
+
 	// pass the buffer to the frame handler
-	mmal_buffer_header_mem_lock(buffer);
-	frameHandler->HandleFrame(buffer);
-	mmal_buffer_header_mem_unlock(buffer);
+	frameHandler->HandleFrame(frame);
 
 	// release buffer back to the pool
 	mmal_buffer_header_release(buffer);
