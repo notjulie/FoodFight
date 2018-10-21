@@ -8,9 +8,15 @@
 #ifndef FRAMEHANDLER_H_
 #define FRAMEHANDLER_H_
 
+#include <stdio.h>
+#include "interface/mmal/mmal.h"
 
 class FrameHandler
 {
+public:
+	FrameHandler(void);
+	void HandleFrame(MMAL_BUFFER_HEADER_T *frame);
+
 public:
 	FILE *file_handle;                   /// File handle to write buffer data to.
 	int abort;                           /// Set to 1 in callback if an error occurs to attempt to abort the capture

@@ -62,7 +62,6 @@ public:
    int onTime;                         /// In timed cycle mode, the amount of time the capture is on per cycle
    int offTime;                        /// In timed cycle mode, the amount of time the capture is off per cycle
 
-   int onlyLuma;                       /// Only output the luma / Y plane of the YUV data
    int useRGB;                         /// Output RGB data rather than YUV
 
    RASPIPREVIEW_PARAMETERS preview_parameters;   /// Preview setup parameters

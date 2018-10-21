@@ -107,7 +107,6 @@ static void display_valid_parameters(const char *app_name);
 #define CommandCamSelect    12
 #define CommandSettings     13
 #define CommandSensorMode   14
-#define CommandOnlyLuma     15
 #define CommandUseRGB       16
 #define CommandSavePTS      17
 #define CommandNetListen    18
@@ -129,7 +128,6 @@ static COMMAND_LIST cmdline_commands[] =
    { CommandCamSelect,     "-camselect",  "cs", "Select camera <number>. Default 0", 1 },
    { CommandSettings,      "-settings",   "set","Retrieve camera settings and write to stdout", 0},
    { CommandSensorMode,    "-mode",       "md", "Force sensor mode. 0=auto. See docs for other modes available", 1},
-   { CommandOnlyLuma,      "-luma",       "y",  "Only output the luma / Y of the YUV data'", 0},
    { CommandUseRGB,        "-rgb",        "rgb","Save as RGB data rather than YUV", 0},
    { CommandSavePTS,       "-save-pts",   "pts","Save Timestamps to file", 1 },
    { CommandNetListen,     "-listen",     "l", "Listen on a TCP socket", 0},
@@ -187,7 +185,6 @@ static void default_status(FrameGrabber *state)
    state->cameraNum = 0;
    state->settings = 0;
    state->sensor_mode = 0;
-   state->onlyLuma = 0;
 
    // Setup preview window defaults
    raspipreview_set_defaults(&state->preview_parameters);
@@ -441,21 +438,7 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
          break;
       }
 
-      case CommandOnlyLuma:
-         if (state->useRGB)
-         {
-            fprintf(stderr, "--luma and --rgb are mutually exclusive\n");
-            valid = 0;
-         }
-         state->onlyLuma = 1;
-         break;
-
       case CommandUseRGB: // display lots of data during run
-         if (state->onlyLuma)
-         {
-            fprintf(stderr, "--luma and --rgb are mutually exclusive\n");
-            valid = 0;
-         }
          state->useRGB = 1;
          break;
 
