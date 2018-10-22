@@ -57,8 +57,6 @@ public:
    int framerate;                      /// Requested frame rate (fps)
    char *filename;                     /// filename of output file
    int verbose;                        /// !0 if want detailed run information
-   int demoMode;                       /// Run app in demo mode
-   int demoInterval;                   /// Interval between camera settings changes
    int waitMethod;                     /// Method for switching between pause and capture
 
    int onTime;                         /// In timed cycle mode, the amount of time the capture is on per cycle

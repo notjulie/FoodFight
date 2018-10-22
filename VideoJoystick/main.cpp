@@ -97,7 +97,6 @@ static void display_valid_parameters(const char *app_name);
 #define CommandOutput       3
 #define CommandVerbose      4
 #define CommandTimeout      5
-#define CommandDemoMode     6
 #define CommandFramerate    7
 #define CommandTimed        8
 #define CommandSignal       9
@@ -117,7 +116,6 @@ static COMMAND_LIST cmdline_commands[] =
    { CommandOutput,        "-output",     "o",  "Output filename <filename> (to write to stdout, use '-o -')", 1 },
    { CommandVerbose,       "-verbose",    "v",  "Output verbose information during run", 0 },
    { CommandTimeout,       "-timeout",    "t",  "Time (in ms) to capture for. If not specified, set to 5s. Zero to disable", 1 },
-   { CommandDemoMode,      "-demo",       "d",  "Run a demo mode (cycle through range of camera options, no capture)", 1},
    { CommandFramerate,     "-framerate",  "fps","Specify the frames per second to record", 1},
    { CommandTimed,         "-timed",      "td", "Cycle between capture and pause. -cycle on,off where on is record time and off is pause time in ms", 0},
    { CommandSignal,        "-signal",     "s",  "Cycle between capture and pause on Signal", 0},
@@ -171,8 +169,6 @@ static void default_status(FrameGrabber *state)
    state->width = 1920;       // Default to 1080p
    state->height = 1080;
    state->framerate = VIDEO_FRAME_RATE_NUM;
-   state->demoMode = 0;
-   state->demoInterval = 250; // ms
    state->waitMethod = WAIT_METHOD_NONE;
    state->onTime = 5000;
    state->offTime = 5000;
@@ -324,32 +320,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
          }
          else
             valid = 0;
-         break;
-      }
-
-      case CommandDemoMode: // Run in demo mode - no capture
-      {
-         // Demo mode might have a timing parameter
-         // so check if a) we have another parameter, b) its not the start of the next option
-         if (i + 1 < argc  && argv[i+1][0] != '-')
-         {
-            if (sscanf(argv[i + 1], "%u", &state->demoInterval) == 1)
-            {
-               // TODO : What limits do we need for timeout?
-               if (state->demoInterval == 0)
-                  state->demoInterval = 250; // ms
-
-               state->demoMode = 1;
-               i++;
-            }
-            else
-               valid = 0;
-         }
-         else
-         {
-            state->demoMode = 1;
-         }
-
          break;
       }
 
@@ -1168,96 +1138,78 @@ int main(int argc, const char **argv)
          // Set up our userdata - this is passed though to the callback where we need the information.
          frameHandler.abort = 0;
 
-         if (frameGrabber.demoMode)
-         {
-            // Run for the user specific time..
-            int num_iterations = frameGrabber.timeout / frameGrabber.demoInterval;
-            int i;
+		// Only save stuff if we have a filename and it opened
+		// Note we use the file handle copy in the callback, as the call back MIGHT change the file handle
+		if (frameHandler.file_handle)
+		{
+		   int running = 1;
 
-            if (frameGrabber.verbose)
-               fprintf(stderr, "Running in demo mode\n");
+		   if (frameGrabber.verbose)
+			  fprintf(stderr, "Enabling camera video port\n");
 
-            for (i=0;frameGrabber.timeout == 0 || i<num_iterations;i++)
-            {
-               raspicamcontrol_cycle_test(frameGrabber.camera_component);
-               vcos_sleep(frameGrabber.demoInterval);
-            }
-         }
-         else
-         {
-            // Only save stuff if we have a filename and it opened
-            // Note we use the file handle copy in the callback, as the call back MIGHT change the file handle
-            if (frameHandler.file_handle)
-            {
-               int running = 1;
+		   // Enable the camera video port and tell it its callback function
+		   status = frameGrabber.SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame) {
+			   frameHandler.HandleFrame(frame);
+		   });
 
-               if (frameGrabber.verbose)
-                  fprintf(stderr, "Enabling camera video port\n");
+		   if (status != MMAL_SUCCESS)
+		   {
+			  vcos_log_error("Failed to setup camera output");
+			  goto error;
+		   }
 
-               // Enable the camera video port and tell it its callback function
-               status = frameGrabber.SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame) {
-            	   frameHandler.HandleFrame(frame);
-               });
+		   // Send all the buffers to the camera video port
+		   {
+			  int num = mmal_queue_length(frameGrabber.camera_pool->queue);
+			  int q;
+			  for (q=0;q<num;q++)
+			  {
+				 MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(frameGrabber.camera_pool->queue);
 
-               if (status != MMAL_SUCCESS)
-               {
-                  vcos_log_error("Failed to setup camera output");
-                  goto error;
-               }
+				 if (!buffer)
+					vcos_log_error("Unable to get a required buffer %d from pool queue", q);
 
-               // Send all the buffers to the camera video port
-               {
-                  int num = mmal_queue_length(frameGrabber.camera_pool->queue);
-                  int q;
-                  for (q=0;q<num;q++)
-                  {
-                     MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(frameGrabber.camera_pool->queue);
+				 if (mmal_port_send_buffer(frameGrabber.GetVideoPort(), buffer)!= MMAL_SUCCESS)
+					vcos_log_error("Unable to send a buffer to camera video port (%d)", q);
+			  }
+		   }
 
-                     if (!buffer)
-                        vcos_log_error("Unable to get a required buffer %d from pool queue", q);
+		   while (running)
+		   {
+			  // Change state
 
-                     if (mmal_port_send_buffer(frameGrabber.GetVideoPort(), buffer)!= MMAL_SUCCESS)
-                        vcos_log_error("Unable to send a buffer to camera video port (%d)", q);
-                  }
-               }
+			   frameGrabber.bCapturing = !frameGrabber.bCapturing;
 
-               while (running)
-               {
-                  // Change state
+			  if (mmal_port_parameter_set_boolean(frameGrabber.GetVideoPort(), MMAL_PARAMETER_CAPTURE, frameGrabber.bCapturing) != MMAL_SUCCESS)
+			  {
+				 // How to handle?
+			  }
 
-            	   frameGrabber.bCapturing = !frameGrabber.bCapturing;
+			  if (frameGrabber.verbose)
+			  {
+				 if (frameGrabber.bCapturing)
+					fprintf(stderr, "Starting video capture\n");
+				 else
+					fprintf(stderr, "Pausing video capture\n");
+			  }
 
-                  if (mmal_port_parameter_set_boolean(frameGrabber.GetVideoPort(), MMAL_PARAMETER_CAPTURE, frameGrabber.bCapturing) != MMAL_SUCCESS)
-                  {
-                     // How to handle?
-                  }
+			  running = wait_for_next_change(&frameGrabber, &frameHandler);
+		   }
 
-                  if (frameGrabber.verbose)
-                  {
-                     if (frameGrabber.bCapturing)
-                        fprintf(stderr, "Starting video capture\n");
-                     else
-                        fprintf(stderr, "Pausing video capture\n");
-                  }
-
-                  running = wait_for_next_change(&frameGrabber, &frameHandler);
-               }
-
-               if (frameGrabber.verbose)
-                  fprintf(stderr, "Finished capture\n");
-            }
-            else
-            {
-               if (frameGrabber.timeout)
-                  vcos_sleep(frameGrabber.timeout);
-               else
-               {
-                  // timeout = 0 so run forever
-                  while(1)
-                     vcos_sleep(ABORT_INTERVAL);
-               }
-            }
-         }
+		   if (frameGrabber.verbose)
+			  fprintf(stderr, "Finished capture\n");
+		}
+		else
+		{
+		   if (frameGrabber.timeout)
+			  vcos_sleep(frameGrabber.timeout);
+		   else
+		   {
+			  // timeout = 0 so run forever
+			  while(1)
+				 vcos_sleep(ABORT_INTERVAL);
+		   }
+		}
       }
       else
       {
