@@ -86,14 +86,12 @@ static void display_valid_parameters(const char *app_name);
 #define CommandWidth        1
 #define CommandHeight       2
 #define CommandOutput       3
-#define CommandVerbose      4
 #define CommandFramerate    7
 #define CommandInitialState 11
 #define CommandCamSelect    12
 #define CommandSettings     13
 #define CommandSensorMode   14
 #define CommandUseRGB       16
-#define CommandNetListen    18
 
 static COMMAND_LIST cmdline_commands[] =
 {
@@ -101,14 +99,12 @@ static COMMAND_LIST cmdline_commands[] =
    { CommandWidth,         "-width",      "w",  "Set image width <size>. Default 1920", 1 },
    { CommandHeight,        "-height",     "h",  "Set image height <size>. Default 1080", 1 },
    { CommandOutput,        "-output",     "o",  "Output filename <filename> (to write to stdout, use '-o -')", 1 },
-   { CommandVerbose,       "-verbose",    "v",  "Output verbose information during run", 0 },
    { CommandFramerate,     "-framerate",  "fps","Specify the frames per second to record", 1},
    { CommandInitialState,  "-initial",    "i",  "Initial state. Use 'record' or 'pause'. Default 'record'", 1},
    { CommandCamSelect,     "-camselect",  "cs", "Select camera <number>. Default 0", 1 },
    { CommandSettings,      "-settings",   "set","Retrieve camera settings and write to stdout", 0},
    { CommandSensorMode,    "-mode",       "md", "Force sensor mode. 0=auto. See docs for other modes available", 1},
    { CommandUseRGB,        "-rgb",        "rgb","Save as RGB data rather than YUV", 0},
-   { CommandNetListen,     "-listen",     "l", "Listen on a TCP socket", 0},
 };
 
 static int cmdline_commands_size = sizeof(cmdline_commands) / sizeof(cmdline_commands[0]);
@@ -147,45 +143,6 @@ static void default_status(FrameGrabber *state)
    raspicamcontrol_set_defaults(&state->camera_parameters);
 }
 
-
-/**
- * Dump image state parameters to stderr.
- *
- * @param state Pointer to state structure to assign defaults to
- */
-static void dump_status(FrameGrabber *state)
-{
-   int size, ystride, yheight;
-
-   if (!state)
-   {
-      vcos_assert(0);
-      return;
-   }
-
-   fprintf(stderr, "Width %d, Height %d, filename %s\n", state->width, state->height, state->filename);
-   fprintf(stderr, "framerate %d\n", state->framerate);
-
-   // Calculate the individual image size
-   // Y stride rounded to multiple of 32. U&V stride is Y stride/2 (ie multiple of 16).
-   // Y height is padded to a 16. U/V height is Y height/2 (ie multiple of 8).
-
-   // Y plane
-   ystride = ((state->width + 31) & ~31);
-   yheight = ((state->height + 15) & ~15);
-
-   size = ystride * yheight;
-
-   // U and V plane
-   size += 2 * ystride/2 * yheight/2;
-
-   fprintf(stderr, "Sub-image size %d bytes in total.\n  Y pitch %d, Y height %d, UV pitch %d, UV Height %d\n", size, ystride, yheight, ystride/2,yheight/2);
-
-   fprintf(stderr, "\nInitial state '%s'\n", raspicli_unmap_xref(state->bCapturing, initial_map, initial_map_size));
-   fprintf(stderr, "\n\n");
-
-   raspicamcontrol_dump_parameters(&state->camera_parameters);
-}
 
 /**
  * Parse the incoming command line and put resulting parameters in to the state
@@ -262,10 +219,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
          break;
       }
 
-      case CommandVerbose: // display lots of data during run
-         state->verbose = 1;
-         break;
-
       case CommandFramerate: // fps to record
       {
          if (sscanf(argv[i + 1], "%u", &state->framerate) == 1)
@@ -318,13 +271,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
       case CommandUseRGB: // display lots of data during run
          state->useRGB = 1;
          break;
-
-      case CommandNetListen:
-      {
-         state->netListen = true;
-
-         break;
-      }
 
       default:
       {
@@ -398,132 +344,7 @@ static FILE *open_filename(FrameGrabber *pState, char *filename)
 
    if (filename)
    {
-      bool bNetwork = false;
-      int sfd = -1, socktype;
-
-      if(!strncmp("tcp://", filename, 6))
-      {
-         bNetwork = true;
-         socktype = SOCK_STREAM;
-      }
-      else if(!strncmp("udp://", filename, 6))
-      {
-         if (pState->netListen)
-         {
-            fprintf(stderr, "No support for listening in UDP mode\n");
-            exit(131);
-         }
-         bNetwork = true;
-         socktype = SOCK_DGRAM;
-      }
-
-      if(bNetwork)
-      {
-         unsigned short port;
-         filename += 6;
-         char *colon;
-         if(NULL == (colon = strchr(filename, ':')))
-         {
-            fprintf(stderr, "%s is not a valid IPv4:port, use something like tcp://1.2.3.4:1234 or udp://1.2.3.4:1234\n",
-                    filename);
-            exit(132);
-         }
-         if(1 != sscanf(colon + 1, "%hu", &port))
-         {
-            fprintf(stderr,
-                    "Port parse failed. %s is not a valid network file name, use something like tcp://1.2.3.4:1234 or udp://1.2.3.4:1234\n",
-                    filename);
-            exit(133);
-         }
-         char chTmp = *colon;
-         *colon = 0;
-
-         struct sockaddr_in saddr={};
-         saddr.sin_family = AF_INET;
-         saddr.sin_port = htons(port);
-         if(0 == inet_aton(filename, &saddr.sin_addr))
-         {
-            fprintf(stderr, "inet_aton failed. %s is not a valid IPv4 address\n",
-                    filename);
-            exit(134);
-         }
-         *colon = chTmp;
-
-         if (pState->netListen)
-         {
-            int sockListen = socket(AF_INET, SOCK_STREAM, 0);
-            if (sockListen >= 0)
-            {
-               int iTmp = 1;
-               setsockopt(sockListen, SOL_SOCKET, SO_REUSEADDR, &iTmp, sizeof(int));//no error handling, just go on
-               if (bind(sockListen, (struct sockaddr *) &saddr, sizeof(saddr)) >= 0)
-               {
-                  while ((-1 == (iTmp = listen(sockListen, 0))) && (EINTR == errno))
-                     ;
-                  if (-1 != iTmp)
-                  {
-                     fprintf(stderr, "Waiting for a TCP connection on %s:%" SCNu16 "...",
-                             inet_ntoa(saddr.sin_addr), ntohs(saddr.sin_port));
-                     struct sockaddr_in cli_addr;
-                     socklen_t clilen = sizeof(cli_addr);
-                     while ((-1 == (sfd = accept(sockListen, (struct sockaddr *) &cli_addr, &clilen))) && (EINTR == errno))
-                        ;
-                     if (sfd >= 0)
-                        fprintf(stderr, "Client connected from %s:%" SCNu16 "\n", inet_ntoa(cli_addr.sin_addr), ntohs(cli_addr.sin_port));
-                     else
-                        fprintf(stderr, "Error on accept: %s\n", strerror(errno));
-                  }
-                  else//if (-1 != iTmp)
-                  {
-                     fprintf(stderr, "Error trying to listen on a socket: %s\n", strerror(errno));
-                  }
-               }
-               else//if (bind(sockListen, (struct sockaddr *) &saddr, sizeof(saddr)) >= 0)
-               {
-                  fprintf(stderr, "Error on binding socket: %s\n", strerror(errno));
-               }
-            }
-            else//if (sockListen >= 0)
-            {
-               fprintf(stderr, "Error creating socket: %s\n", strerror(errno));
-            }
-
-            if (sockListen >= 0)//regardless success or error
-               close(sockListen);//do not listen on a given port anymore
-         }
-         else//if (pState->netListen)
-         {
-            if(0 <= (sfd = socket(AF_INET, socktype, 0)))
-            {
-               fprintf(stderr, "Connecting to %s:%hu...", inet_ntoa(saddr.sin_addr), port);
-
-               int iTmp = 1;
-               while ((-1 == (iTmp = connect(sfd, (struct sockaddr *) &saddr, sizeof(struct sockaddr_in)))) && (EINTR == errno))
-                  ;
-               if (iTmp < 0)
-                  fprintf(stderr, "error: %s\n", strerror(errno));
-               else
-                  fprintf(stderr, "connected, sending video...\n");
-            }
-            else
-               fprintf(stderr, "Error creating socket: %s\n", strerror(errno));
-         }
-
-         if (sfd >= 0)
-            new_handle = fdopen(sfd, "w");
-      }
-      else
-      {
-         new_handle = fopen(filename, "wb");
-      }
-   }
-
-   if (pState->verbose)
-   {
-      if (new_handle)
-         fprintf(stderr, "Opening output file \"%s\"\n", filename);
-      else
-         fprintf(stderr, "Failed to open new file \"%s\"\n", filename);
+      new_handle = fopen(filename, "wb");
    }
 
    return new_handle;
@@ -634,12 +455,6 @@ int main(int argc, const char **argv)
       exit(EX_USAGE);
    }
 
-   if (frameGrabber.verbose)
-   {
-      fprintf(stderr, "\n%s Camera App %s\n\n", basename(argv[0]), VERSION_STRING);
-      dump_status(&frameGrabber);
-   }
-
    // OK, we have a nice set of parameters. Now set up our components
    // We have two components. Camera, Preview
 
@@ -650,8 +465,6 @@ int main(int argc, const char **argv)
    }
    else
    {
-      if (frameGrabber.verbose)
-         fprintf(stderr, "Starting component connection stage\n");
       status = MMAL_SUCCESS;
 
       if (status == MMAL_SUCCESS)
@@ -681,9 +494,6 @@ int main(int argc, const char **argv)
 		if (frameHandler.file_handle)
 		{
 		   int running = 1;
-
-		   if (frameGrabber.verbose)
-			  fprintf(stderr, "Enabling camera video port\n");
 
 		   // Enable the camera video port and tell it its callback function
 		   status = frameGrabber.SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame) {
@@ -723,19 +533,8 @@ int main(int argc, const char **argv)
 				 // How to handle?
 			  }
 
-			  if (frameGrabber.verbose)
-			  {
-				 if (frameGrabber.bCapturing)
-					fprintf(stderr, "Starting video capture\n");
-				 else
-					fprintf(stderr, "Pausing video capture\n");
-			  }
-
 			  running = wait_for_next_change(&frameGrabber, &frameHandler);
 		   }
-
-		   if (frameGrabber.verbose)
-			  fprintf(stderr, "Finished capture\n");
 		}
       }
       else
@@ -748,9 +547,6 @@ error:
 
       mmal_status_to_int(status);
 
-      if (frameGrabber.verbose)
-         fprintf(stderr, "Closing down\n");
-
       // Disable all our ports that are not handled by connections
       check_disable_port(frameGrabber.GetVideoPort());
       frameGrabber.DisableCamera();
@@ -761,9 +557,6 @@ error:
          fclose(frameHandler.file_handle);
 
       frameGrabber.DestroyCameraComponent();
-
-      if (frameGrabber.verbose)
-         fprintf(stderr, "Close down completed, all components disconnected, disabled and destroyed\n\n");
    }
 
    if (status != MMAL_SUCCESS)

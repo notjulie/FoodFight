@@ -150,8 +150,6 @@ MMAL_STATUS_T FrameGrabber::CreateCameraComponent(void)
        if (framerate > 1000000./camera_parameters.shutter_speed)
        {
           framerate=0;
-          if (verbose)
-             fprintf(stderr, "Enable dynamic frame rate to fulfil shutter speed requirement\n");
        }
     }
 
@@ -248,9 +246,6 @@ MMAL_STATUS_T FrameGrabber::CreateCameraComponent(void)
 
     camera_pool = pool;
     camera_component = camera;
-
-    if (verbose)
-       fprintf(stderr, "Camera component done\n");
 
     return status;
    }

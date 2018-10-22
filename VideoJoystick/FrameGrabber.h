@@ -51,7 +51,6 @@ public:
    uint32_t height;                         /// requested height of image
    int framerate;                      /// Requested frame rate (fps)
    char *filename;                     /// filename of output file
-   int verbose;                        /// !0 if want detailed run information
 
    int useRGB;                         /// Output RGB data rather than YUV
 
@@ -64,12 +63,6 @@ public:
    int cameraNum;                       /// Camera number
    int settings;                        /// Request settings from the camera
    int sensor_mode;                     /// Sensor mode. 0=auto. Check docs/forum for modes selected by other values.
-
-   int frame;
-   int64_t starttime;
-   int64_t lasttime;
-
-   bool netListen;
 
 private:
    MMAL_COMPONENT_T *camera_component = nullptr;    /// Pointer to the camera component
