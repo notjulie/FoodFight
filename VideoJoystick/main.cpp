@@ -87,11 +87,7 @@ static void display_valid_parameters(const char *app_name);
 #define CommandHeight       2
 #define CommandOutput       3
 #define CommandVerbose      4
-#define CommandTimeout      5
 #define CommandFramerate    7
-#define CommandTimed        8
-#define CommandSignal       9
-#define CommandKeypress     10
 #define CommandInitialState 11
 #define CommandCamSelect    12
 #define CommandSettings     13
@@ -106,11 +102,7 @@ static COMMAND_LIST cmdline_commands[] =
    { CommandHeight,        "-height",     "h",  "Set image height <size>. Default 1080", 1 },
    { CommandOutput,        "-output",     "o",  "Output filename <filename> (to write to stdout, use '-o -')", 1 },
    { CommandVerbose,       "-verbose",    "v",  "Output verbose information during run", 0 },
-   { CommandTimeout,       "-timeout",    "t",  "Time (in ms) to capture for. If not specified, set to 5s. Zero to disable", 1 },
    { CommandFramerate,     "-framerate",  "fps","Specify the frames per second to record", 1},
-   { CommandTimed,         "-timed",      "td", "Cycle between capture and pause. -cycle on,off where on is record time and off is pause time in ms", 0},
-   { CommandSignal,        "-signal",     "s",  "Cycle between capture and pause on Signal", 0},
-   { CommandKeypress,      "-keypress",   "k",  "Cycle between capture and pause on ENTER", 0},
    { CommandInitialState,  "-initial",    "i",  "Initial state. Use 'record' or 'pause'. Default 'record'", 1},
    { CommandCamSelect,     "-camselect",  "cs", "Select camera <number>. Default 0", 1 },
    { CommandSettings,      "-settings",   "set","Retrieve camera settings and write to stdout", 0},
@@ -121,21 +113,6 @@ static COMMAND_LIST cmdline_commands[] =
 
 static int cmdline_commands_size = sizeof(cmdline_commands) / sizeof(cmdline_commands[0]);
 
-
-static struct
-{
-   const char *description;
-   int nextWaitMethod;
-} wait_method_description[] =
-{
-      {"Simple capture",         WAIT_METHOD_NONE},
-      {"Capture forever",        WAIT_METHOD_FOREVER},
-      {"Cycle on time",          WAIT_METHOD_TIMED},
-      {"Cycle on keypress",      WAIT_METHOD_KEYPRESS},
-      {"Cycle on signal",        WAIT_METHOD_SIGNAL},
-};
-
-static int wait_method_description_size = sizeof(wait_method_description) / sizeof(wait_method_description[0]);
 
 
 
@@ -156,13 +133,9 @@ static void default_status(FrameGrabber *state)
    memset(state, 0, sizeof(FrameGrabber));
 
    // Now set anything non-zero
-   state->timeout = 5000;     // 5s delay before take image
    state->width = 1920;       // Default to 1080p
    state->height = 1080;
    state->framerate = VIDEO_FRAME_RATE_NUM;
-   state->waitMethod = WAIT_METHOD_NONE;
-   state->onTime = 5000;
-   state->offTime = 5000;
 
    state->bCapturing = 0;
 
@@ -182,7 +155,7 @@ static void default_status(FrameGrabber *state)
  */
 static void dump_status(FrameGrabber *state)
 {
-   int i, size, ystride, yheight;
+   int size, ystride, yheight;
 
    if (!state)
    {
@@ -191,7 +164,7 @@ static void dump_status(FrameGrabber *state)
    }
 
    fprintf(stderr, "Width %d, Height %d, filename %s\n", state->width, state->height, state->filename);
-   fprintf(stderr, "framerate %d, time delay %d\n", state->framerate, state->timeout);
+   fprintf(stderr, "framerate %d\n", state->framerate);
 
    // Calculate the individual image size
    // Y stride rounded to multiple of 32. U&V stride is Y stride/2 (ie multiple of 16).
@@ -208,12 +181,6 @@ static void dump_status(FrameGrabber *state)
 
    fprintf(stderr, "Sub-image size %d bytes in total.\n  Y pitch %d, Y height %d, UV pitch %d, UV Height %d\n", size, ystride, yheight, ystride/2,yheight/2);
 
-   fprintf(stderr, "Wait method : ");
-   for (i=0;i<wait_method_description_size;i++)
-   {
-      if (state->waitMethod == wait_method_description[i].nextWaitMethod)
-         fprintf(stderr, "%s", wait_method_description[i].description);
-   }
    fprintf(stderr, "\nInitial state '%s'\n", raspicli_unmap_xref(state->bCapturing, initial_map, initial_map_size));
    fprintf(stderr, "\n\n");
 
@@ -299,21 +266,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
          state->verbose = 1;
          break;
 
-      case CommandTimeout: // Time to run viewfinder/capture
-      {
-         if (sscanf(argv[i + 1], "%u", &state->timeout) == 1)
-         {
-            // Ensure that if previously selected a waitMethod we don't overwrite it
-            if (state->timeout == 0 && state->waitMethod == WAIT_METHOD_NONE)
-               state->waitMethod = WAIT_METHOD_FOREVER;
-
-            i++;
-         }
-         else
-            valid = 0;
-         break;
-      }
-
       case CommandFramerate: // fps to record
       {
          if (sscanf(argv[i + 1], "%u", &state->framerate) == 1)
@@ -325,35 +277,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
             valid = 0;
          break;
       }
-
-      case CommandTimed:
-      {
-         if (sscanf(argv[i + 1], "%u,%u", &state->onTime, &state->offTime) == 2)
-         {
-            i++;
-
-            if (state->onTime < 1000)
-               state->onTime = 1000;
-
-            if (state->offTime < 1000)
-               state->offTime = 1000;
-
-            state->waitMethod = WAIT_METHOD_TIMED;
-         }
-         else
-            valid = 0;
-         break;
-      }
-
-      case CommandKeypress:
-         state->waitMethod = WAIT_METHOD_KEYPRESS;
-         break;
-
-      case CommandSignal:
-         state->waitMethod = WAIT_METHOD_SIGNAL;
-         // Reenable the signal
-         signal(SIGUSR1, signal_handler);
-         break;
 
       case CommandInitialState:
       {
@@ -650,32 +573,6 @@ static void signal_handler(int signal_number)
 
 }
 
-/**
- * Pause for specified time, but return early if detect an abort request
- *
- * @param state Pointer to state control struct
- * @param pause Time in ms to pause
- * @param callback Struct contain an abort flag tested for early termination
- *
- */
-static int pause_and_test_abort(FrameHandler *frameHandler, int pause)
-{
-   int wait;
-
-   if (!pause)
-      return 0;
-
-   // Going to check every ABORT_INTERVAL milliseconds
-   for (wait = 0; wait < pause; wait+= ABORT_INTERVAL)
-   {
-      vcos_sleep(ABORT_INTERVAL);
-      if (frameHandler->abort)
-         return 1;
-   }
-
-   return 0;
-}
-
 
 /**
  * Function to wait in various ways (depending on settings)
@@ -686,94 +583,15 @@ static int pause_and_test_abort(FrameHandler *frameHandler, int pause)
  */
 static int wait_for_next_change(FrameGrabber *state, FrameHandler *frameHandler)
 {
-   int keep_running = 1;
-   static int64_t complete_time = -1;
-
-   // Have we actually exceeded our timeout?
-   int64_t current_time =  vcos_getmicrosecs64()/1000;
-
-   if (complete_time == -1)
-      complete_time =  current_time + state->timeout;
-
-   // if we have run out of time, flag we need to exit
-   if (current_time >= complete_time && state->timeout != 0)
-      keep_running = 0;
-
-   switch (state->waitMethod)
+   // Going to check every ABORT_INTERVAL milliseconds
+   for (;;)
    {
-   case WAIT_METHOD_NONE:
-      (void)pause_and_test_abort(frameHandler, state->timeout);
-      return 0;
-
-   case WAIT_METHOD_FOREVER:
-   {
-      // We never return from this. Expect a ctrl-c to exit.
-      while (1)
-         // Have a sleep so we don't hog the CPU.
-         vcos_sleep(10000);
-
-      return 0;
+	  vcos_sleep(ABORT_INTERVAL);
+	  if (frameHandler->Terminated())
+		 break;
    }
 
-   case WAIT_METHOD_TIMED:
-   {
-      int abort;
-
-      if (state->bCapturing)
-         abort = pause_and_test_abort(frameHandler, state->onTime);
-      else
-         abort = pause_and_test_abort(frameHandler, state->offTime);
-
-      if (abort)
-         return 0;
-      else
-         return keep_running;
-   }
-
-   case WAIT_METHOD_KEYPRESS:
-   {
-      char ch;
-
-      if (state->verbose)
-         fprintf(stderr, "Press Enter to %s, X then ENTER to exit\n", state->bCapturing ? "pause" : "capture");
-
-      ch = getchar();
-      if (ch == 'x' || ch == 'X')
-         return 0;
-      else
-         return keep_running;
-   }
-
-   case WAIT_METHOD_SIGNAL:
-   {
-      // Need to wait for a SIGUSR1 signal
-      sigset_t waitset;
-      int sig;
-      int result = 0;
-
-      sigemptyset( &waitset );
-      sigaddset( &waitset, SIGUSR1 );
-
-      // We are multi threaded because we use mmal, so need to use the pthread
-      // variant of procmask to block SIGUSR1 so we can wait on it.
-      pthread_sigmask( SIG_BLOCK, &waitset, NULL );
-
-      if (state->verbose)
-      {
-         fprintf(stderr, "Waiting for SIGUSR1 to %s\n", state->bCapturing ? "pause" : "capture");
-      }
-
-      result = sigwait( &waitset, &sig );
-
-      if (state->verbose && result != 0)
-         fprintf(stderr, "Bad signal received - error %d\n", errno);
-
-      return keep_running;
-   }
-
-   } // switch
-
-   return keep_running;
+   return 0;
 }
 
 /**
@@ -858,9 +676,6 @@ int main(int argc, const char **argv)
             }
          }
 
-         // Set up our userdata - this is passed though to the callback where we need the information.
-         frameHandler.abort = 0;
-
 		// Only save stuff if we have a filename and it opened
 		// Note we use the file handle copy in the callback, as the call back MIGHT change the file handle
 		if (frameHandler.file_handle)
@@ -921,17 +736,6 @@ int main(int argc, const char **argv)
 
 		   if (frameGrabber.verbose)
 			  fprintf(stderr, "Finished capture\n");
-		}
-		else
-		{
-		   if (frameGrabber.timeout)
-			  vcos_sleep(frameGrabber.timeout);
-		   else
-		   {
-			  // timeout = 0 so run forever
-			  while(1)
-				 vcos_sleep(ABORT_INTERVAL);
-		   }
 		}
       }
       else
