@@ -4,6 +4,8 @@
 
 #include <stdint.h>
 #include <stdio.h>
+#include <functional>
+#include <memory>
 #include "interface/mmal/mmal.h"
 #include "interface/mmal/util/mmal_connection.h"
 
@@ -12,7 +14,8 @@ extern "C" {
    #include "RaspiPreview.h"
 };
 
-#include "FrameHandler.h"
+#include "VideoFrame.h"
+
 
 // Standard port setting for the camera component
 #define MMAL_CAMERA_PREVIEW_PORT 0
@@ -38,7 +41,7 @@ class FrameGrabber
 {
 public:
 	FrameGrabber(void);
-	MMAL_STATUS_T SetupFrameCallback(FrameHandler *frameHandler);
+	MMAL_STATUS_T SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback);
 
 	MMAL_PORT_T *GetVideoPort(void) { return camera_component->output[MMAL_CAMERA_VIDEO_PORT]; }
 
@@ -85,7 +88,7 @@ public:
    bool netListen;
 
 private:
-   FrameHandler *frameHandler;         /// Used to move data to the camera callback
+   std::function<void(const std::shared_ptr<VideoFrame> &)> frameCallback;
 };
 
 

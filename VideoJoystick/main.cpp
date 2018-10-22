@@ -60,7 +60,7 @@ extern "C" {
 
 #include <semaphore.h>
 #include "FrameGrabber.h"
-
+#include "FrameHandler.h"
 
 
 // Video format information
@@ -1297,7 +1297,9 @@ int main(int argc, const char **argv)
                   fprintf(stderr, "Enabling camera video port\n");
 
                // Enable the camera video port and tell it its callback function
-               status = frameGrabber.SetupFrameCallback(&frameHandler);
+               status = frameGrabber.SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame) {
+            	   frameHandler.HandleFrame(frame);
+               });
 
                if (status != MMAL_SUCCESS)
                {

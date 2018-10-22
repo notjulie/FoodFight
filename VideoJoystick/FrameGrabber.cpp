@@ -8,9 +8,9 @@ FrameGrabber::FrameGrabber(void)
 {
 }
 
-MMAL_STATUS_T FrameGrabber::SetupFrameCallback(FrameHandler *frameHandler)
+MMAL_STATUS_T FrameGrabber::SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback)
 {
-	this->frameHandler = frameHandler;
+	this->frameCallback = callback;
 	GetVideoPort()->userdata = (struct MMAL_PORT_USERDATA_T *)this;
     return mmal_port_enable(GetVideoPort(), CameraBufferCallbackEntry);
 }
@@ -31,7 +31,7 @@ void FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T 
 	frame.reset(new VideoFrame(buffer));
 
 	// pass the buffer to the frame handler
-	frameHandler->HandleFrame(frame);
+	frameCallback(frame);
 
 	// release buffer back to the pool
 	mmal_buffer_header_release(buffer);
