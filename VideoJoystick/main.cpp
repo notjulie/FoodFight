@@ -54,7 +54,6 @@
 
 extern "C" {
    #include "RaspiCamControl.h"
-   #include "RaspiPreview.h"
    #include "RaspiCLI.h"
 };
 
@@ -184,9 +183,6 @@ static void default_status(FrameGrabber *state)
    state->settings = 0;
    state->sensor_mode = 0;
 
-   // Setup preview window defaults
-   raspipreview_set_defaults(&state->preview_parameters);
-
    // Set up the camera_parameters to default
    raspicamcontrol_set_defaults(&state->camera_parameters);
 }
@@ -234,7 +230,6 @@ static void dump_status(FrameGrabber *state)
    fprintf(stderr, "\nInitial state '%s'\n", raspicli_unmap_xref(state->bCapturing, initial_map, initial_map_size));
    fprintf(stderr, "\n\n");
 
-   raspipreview_dump_parameters(&state->preview_parameters);
    raspicamcontrol_dump_parameters(&state->camera_parameters);
 }
 
@@ -455,11 +450,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
          const char *second_arg = (i + 1 < argc) ? argv[i + 1] : NULL;
          int parms_used = (raspicamcontrol_parse_cmdline(&state->camera_parameters, &argv[i][1], second_arg));
 
-         // Still unused, try preview options
-         if (!parms_used)
-            parms_used = raspipreview_parse_cmdline(&state->preview_parameters, &argv[i][1], second_arg);
-
-
          // If no parms were used, this must be a bad parameters
          if (!parms_used)
             valid = 0;
@@ -504,9 +494,6 @@ static void display_valid_parameters(const char *app_name)
    raspicli_display_help(cmdline_commands, cmdline_commands_size);
 
    fprintf(stdout, "\n");
-
-   // Help for preview options
-   raspipreview_display_help();
 
    // Now display any help information from the camcontrol code
    raspicamcontrol_display_help();
@@ -724,8 +711,7 @@ static MMAL_STATUS_T create_camera_component(FrameGrabber *state)
    MMAL_STATUS_T status;
 
    try {
-    MMAL_ES_FORMAT_T *format;
-    MMAL_PORT_T *preview_port = NULL, *video_port = NULL, *still_port = NULL;
+    MMAL_PORT_T *video_port = NULL, *still_port = NULL;
     MMAL_POOL_T *pool;
 
     /* Create the component */
@@ -753,7 +739,6 @@ static MMAL_STATUS_T create_camera_component(FrameGrabber *state)
     if (status != MMAL_SUCCESS)
        throw std::runtime_error("Could not set sensor mode");
 
-    preview_port = camera->output[MMAL_CAMERA_PREVIEW_PORT];
     video_port = camera->output[MMAL_CAMERA_VIDEO_PORT];
     still_port = camera->output[MMAL_CAMERA_CAPTURE_PORT];
 
@@ -797,24 +782,6 @@ static MMAL_STATUS_T create_camera_component(FrameGrabber *state)
 
     // Now set up the port formats
 
-    // Set the encode format on the Preview port
-    // HW limitations mean we need the preview to be the same size as the required recorded output
-
-    format = preview_port->format;
-
-    if(state->camera_parameters.shutter_speed > 6000000)
-    {
-         MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
-                                                      { 50, 1000 }, {166, 1000}};
-         mmal_port_parameter_set(preview_port, &fps_range.hdr);
-    }
-    else if(state->camera_parameters.shutter_speed > 1000000)
-    {
-         MMAL_PARAMETER_FPS_RANGE_T fps_range = {{MMAL_PARAMETER_FPS_RANGE, sizeof(fps_range)},
-                                                      { 166, 1000 }, {999, 1000}};
-         mmal_port_parameter_set(preview_port, &fps_range.hdr);
-    }
-
     //enable dynamic framerate if necessary
     if (state->camera_parameters.shutter_speed)
     {
@@ -826,24 +793,9 @@ static MMAL_STATUS_T create_camera_component(FrameGrabber *state)
        }
     }
 
-    format->encoding = MMAL_ENCODING_OPAQUE;
-    format->es->video.width = VCOS_ALIGN_UP(state->width, 32);
-    format->es->video.height = VCOS_ALIGN_UP(state->height, 16);
-    format->es->video.crop.x = 0;
-    format->es->video.crop.y = 0;
-    format->es->video.crop.width = state->width;
-    format->es->video.crop.height = state->height;
-    format->es->video.frame_rate.num = PREVIEW_FRAME_RATE_NUM;
-    format->es->video.frame_rate.den = PREVIEW_FRAME_RATE_DEN;
-
-    status = mmal_port_format_commit(preview_port);
-
-    if (status != MMAL_SUCCESS)
-       throw std::runtime_error("camera viewfinder format couldn't be set");
-
     // Set the encode format on the video  port
 
-    format = video_port->format;
+    MMAL_ES_FORMAT_T *format = video_port->format;
 
     if(state->camera_parameters.shutter_speed > 6000000)
     {
@@ -970,31 +922,6 @@ static void destroy_camera_component(FrameGrabber *state)
    }
 }
 
-
-/**
- * Connect two specific ports together
- *
- * @param output_port Pointer the output port
- * @param input_port Pointer the input port
- * @param Pointer to a mmal connection pointer, reassigned if function successful
- * @return Returns a MMAL_STATUS_T giving result of operation
- *
- */
-static MMAL_STATUS_T connect_ports(MMAL_PORT_T *output_port, MMAL_PORT_T *input_port, MMAL_CONNECTION_T **connection)
-{
-   MMAL_STATUS_T status;
-
-   status =  mmal_connection_create(connection, output_port, input_port, MMAL_CONNECTION_FLAG_TUNNELLING | MMAL_CONNECTION_FLAG_ALLOCATION_ON_INPUT);
-
-   if (status == MMAL_SUCCESS)
-   {
-      status =  mmal_connection_enable(*connection);
-      if (status != MMAL_SUCCESS)
-         mmal_connection_destroy(*connection);
-   }
-
-   return status;
-}
 
 /**
  * Checks if specified port is valid and enabled, then disables it
@@ -1167,8 +1094,6 @@ int main(int argc, const char **argv)
    int exit_code = EX_OK;
 
    MMAL_STATUS_T status = MMAL_SUCCESS;
-   MMAL_PORT_T *camera_preview_port = NULL;
-   MMAL_PORT_T *preview_input_port = NULL;
 
    bcm_host_init();
 
@@ -1212,38 +1137,11 @@ int main(int argc, const char **argv)
       vcos_log_error("%s: Failed to create camera component", __func__);
       exit_code = EX_SOFTWARE;
    }
-   else if ((status = raspipreview_create(&frameGrabber.preview_parameters)) != MMAL_SUCCESS)
-   {
-      vcos_log_error("%s: Failed to create preview component", __func__);
-      destroy_camera_component(&frameGrabber);
-      exit_code = EX_SOFTWARE;
-   }
    else
    {
       if (frameGrabber.verbose)
          fprintf(stderr, "Starting component connection stage\n");
-
-      camera_preview_port = frameGrabber.camera_component->output[MMAL_CAMERA_PREVIEW_PORT];
-      preview_input_port  = frameGrabber.preview_parameters.preview_component->input[0];
-
-      if (frameGrabber.preview_parameters.wantPreview )
-      {
-         if (frameGrabber.verbose)
-         {
-            fprintf(stderr, "Connecting camera preview port to preview input port\n");
-            fprintf(stderr, "Starting video preview\n");
-         }
-
-         // Connect camera to preview
-         status = connect_ports(camera_preview_port, preview_input_port, &frameGrabber.preview_connection);
-
-         if (status != MMAL_SUCCESS)
-        	 frameGrabber.preview_connection = NULL;
-      }
-      else
-      {
-         status = MMAL_SUCCESS;
-      }
+      status = MMAL_SUCCESS;
 
       if (status == MMAL_SUCCESS)
       {
@@ -1377,12 +1275,6 @@ error:
       // Disable all our ports that are not handled by connections
       check_disable_port(frameGrabber.GetVideoPort());
 
-      if (frameGrabber.preview_parameters.wantPreview && frameGrabber.preview_connection)
-         mmal_connection_destroy(frameGrabber.preview_connection);
-
-      if (frameGrabber.preview_parameters.preview_component)
-         mmal_component_disable(frameGrabber.preview_parameters.preview_component);
-
       if (frameGrabber.camera_component)
          mmal_component_disable(frameGrabber.camera_component);
 
@@ -1391,7 +1283,6 @@ error:
       if (frameHandler.file_handle && frameHandler.file_handle != stdout)
          fclose(frameHandler.file_handle);
 
-      raspipreview_destroy(&frameGrabber.preview_parameters);
       destroy_camera_component(&frameGrabber);
 
       if (frameGrabber.verbose)

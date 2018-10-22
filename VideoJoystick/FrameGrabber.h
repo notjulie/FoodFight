@@ -11,14 +11,13 @@
 
 extern "C" {
    #include "RaspiCamControl.h"
-   #include "RaspiPreview.h"
 };
 
 #include "VideoFrame.h"
 
 
 // Standard port setting for the camera component
-#define MMAL_CAMERA_PREVIEW_PORT 0
+//#define MMAL_CAMERA_PREVIEW_PORT 0
 #define MMAL_CAMERA_VIDEO_PORT 1
 #define MMAL_CAMERA_CAPTURE_PORT 2
 
@@ -67,11 +66,9 @@ public:
 
    int useRGB;                         /// Output RGB data rather than YUV
 
-   RASPIPREVIEW_PARAMETERS preview_parameters;   /// Preview setup parameters
    RASPICAM_CAMERA_PARAMETERS camera_parameters; /// Camera setup parameters
 
    MMAL_COMPONENT_T *camera_component;    /// Pointer to the camera component
-   MMAL_CONNECTION_T *preview_connection; /// Pointer to the connection from camera to preview
 
    MMAL_POOL_T *camera_pool;            /// Pointer to the pool of buffers used by camera video port
 
