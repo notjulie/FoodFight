@@ -16,6 +16,11 @@ extern "C" {
 #include "VideoFrame.h"
 
 
+// Video format information
+// 0 implies variable
+#define VIDEO_FRAME_RATE_NUM 30
+#define VIDEO_FRAME_RATE_DEN 1
+
 // Standard port setting for the camera component
 //#define MMAL_CAMERA_PREVIEW_PORT 0
 #define MMAL_CAMERA_VIDEO_PORT 1
@@ -40,6 +45,9 @@ class FrameGrabber
 {
 public:
 	FrameGrabber(void);
+	MMAL_STATUS_T CreateCameraComponent(void);
+	void DisableCamera(void);
+	void DestroyCameraComponent(void);
 	MMAL_STATUS_T SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback);
 
 	MMAL_PORT_T *GetVideoPort(void) { return camera_component->output[MMAL_CAMERA_VIDEO_PORT]; }
@@ -66,8 +74,6 @@ public:
 
    RASPICAM_CAMERA_PARAMETERS camera_parameters; /// Camera setup parameters
 
-   MMAL_COMPONENT_T *camera_component;    /// Pointer to the camera component
-
    MMAL_POOL_T *camera_pool;            /// Pointer to the pool of buffers used by camera video port
 
    int bCapturing;                      /// State of capture/pause
@@ -83,6 +89,7 @@ public:
    bool netListen;
 
 private:
+   MMAL_COMPONENT_T *camera_component = nullptr;    /// Pointer to the camera component
    std::function<void(const std::shared_ptr<VideoFrame> &)> frameCallback;
 };
 
