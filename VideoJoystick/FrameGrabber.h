@@ -50,7 +50,6 @@ public:
    uint32_t width;                          /// Requested width of image
    uint32_t height;                         /// requested height of image
    int framerate;                      /// Requested frame rate (fps)
-   char *filename;                     /// filename of output file
 
    int useRGB;                         /// Output RGB data rather than YUV
 

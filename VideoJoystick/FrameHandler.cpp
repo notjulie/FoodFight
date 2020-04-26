@@ -20,9 +20,6 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 	if (framesReceived < 100)
 		return;
 
-	if (framesWritten >= 20)
-		return;
-
 	// get the red intensity of each pixel... I want to know which pixels are red,
 	// and don't have blue or green, so I just report the difference between red and
 	// the larger of blue or green
@@ -48,8 +45,8 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 		{
 			r = r - 3*std::max(g, b);
 			double weight = r * r;
-			xSum += weight*((i/3)%640);
-			ySum += weight*((i/3)/640);
+			xSum += weight*x;
+			ySum += weight*y;
 			rSum += weight;
 		}
 		p += 3;
@@ -57,15 +54,4 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 
 	if (rSum > 0)
 		printf("%d,%d\n", (int)(xSum/rSum), (int)(ySum/rSum));
-
-	int bytes_to_write = frame->GetPixelDataLength();
-	fwrite(frame->GetPixelData(), 1, bytes_to_write, file_handle);
-	//int bytes_to_write = rednessMap.size();
-	//fwrite(&rednessMap[0], 1, bytes_to_write, file_handle);
-	++framesWritten;
-}
-
-bool FrameHandler::Terminated(void)
-{
-	return (framesWritten >= 20);
 }

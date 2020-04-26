@@ -17,14 +17,9 @@ class FrameHandler
 public:
 	FrameHandler(void);
 	void HandleFrame(const std::shared_ptr<VideoFrame> &frame);
-	bool Terminated(void);
-
-public:
-	FILE *file_handle = nullptr;                   /// File handle to write buffer data to.
 
 private:
 	int framesReceived = 0;
-	int framesWritten = 0;
 };
 
 
