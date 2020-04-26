@@ -59,6 +59,7 @@ extern "C" {
 #include <semaphore.h>
 #include "FrameGrabber.h"
 #include "FrameHandler.h"
+#include "SocketListener.h"
 
 
 /// Interval at which we check for an failure abort during capture
@@ -109,7 +110,7 @@ static COMMAND_LIST cmdline_commands[] =
 
 static int cmdline_commands_size = sizeof(cmdline_commands) / sizeof(cmdline_commands[0]);
 
-
+static std::string ProcessCommand(const std::string &s);
 
 
 /**
@@ -420,6 +421,9 @@ static int wait_for_next_change(FrameGrabber *state, FrameHandler *frameHandler)
  */
 int main(int argc, const char **argv)
 {
+   // set up our socket listener... basically a TCP command line for diagnostics
+   SocketListener socketListener([](const std::string &s){return ProcessCommand(s);});
+
    // Our main objects..
    FrameGrabber frameGrabber;
    FrameHandler frameHandler;
@@ -526,7 +530,7 @@ int main(int argc, const char **argv)
 		   {
 			  // Change state
 
-			   frameGrabber.bCapturing = !frameGrabber.bCapturing;
+			  frameGrabber.bCapturing = !frameGrabber.bCapturing;
 
 			  if (mmal_port_parameter_set_boolean(frameGrabber.GetVideoPort(), MMAL_PARAMETER_CAPTURE, frameGrabber.bCapturing) != MMAL_SUCCESS)
 			  {
@@ -563,4 +567,12 @@ error:
       raspicamcontrol_check_configuration(128);
 
    return exit_code;
+}
+
+/// <summary>
+/// Processes a command received from our TCP socket listener
+/// </summary>
+static std::string ProcessCommand(const std::string &s)
+{
+   return std::string("received command: ") + s;
 }
