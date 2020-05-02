@@ -109,7 +109,7 @@ static COMMAND_LIST cmdline_commands[] =
 
 static int cmdline_commands_size = sizeof(cmdline_commands) / sizeof(cmdline_commands[0]);
 
-
+static bool terminateRequested = false;
 
 /**
  * Assign a default set of parameters to the state passed in
@@ -374,6 +374,9 @@ int main(int argc, const char **argv)
 	FrameHandler frameHandler;
 	int exit_code = EX_OK;
 
+	// add our command handlers
+	Commander.AddHandler("shutdown", [](){ terminateRequested = true; });
+
 	MMAL_STATUS_T status = MMAL_SUCCESS;
 
 	bcm_host_init();
@@ -418,8 +421,6 @@ int main(int argc, const char **argv)
 
 		if (status == MMAL_SUCCESS)
 		{
-			int running = 1;
-
 			// Enable the camera video port and tell it its callback function
 			status = frameGrabber.SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame) {
 				frameHandler.HandleFrame(frame);
@@ -447,7 +448,7 @@ int main(int argc, const char **argv)
 				}
 			}
 
-			while (running)
+			while (!terminateRequested)
 			{
 				// Change state
 
@@ -459,7 +460,7 @@ int main(int argc, const char **argv)
 				}
 
 				// watch for signal to exit... currently just an infinite loop
-				for (;;)
+				while (!terminateRequested)
 				{
 					vcos_sleep(ABORT_INTERVAL);
 				}

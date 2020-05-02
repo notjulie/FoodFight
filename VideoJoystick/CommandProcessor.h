@@ -10,12 +10,15 @@
 class CommandProcessor {
 public:
    CommandProcessor(void);
+   void AddHandler(const std::string &command, const std::function<void()> &handler);
+   void AddHandler(const std::string &command, const std::function<std::string (const std::string &)> &handler);
 
    std::string ProcessCommand(const std::string &command);
 
 private:
+   using Handler = std::function<std::string(const std::string &)>;
    std::mutex mutex;
-   std::map<std::string, std::function<std::string(const std::string &)>> handlers;
+   std::map<std::string, Handler> handlers;
 };
 
 
