@@ -57,6 +57,7 @@ extern "C" {
 };
 
 #include <semaphore.h>
+#include "CommandProcessor.h"
 #include "FrameGrabber.h"
 #include "FrameHandler.h"
 #include "SocketListener.h"
@@ -108,7 +109,6 @@ static COMMAND_LIST cmdline_commands[] =
 
 static int cmdline_commands_size = sizeof(cmdline_commands) / sizeof(cmdline_commands[0]);
 
-static std::string ProcessCommand(const std::string &s);
 
 
 /**
@@ -367,7 +367,7 @@ static void signal_handler(int signal_number)
 int main(int argc, const char **argv)
 {
 	// set up our socket listener... basically a TCP command line for diagnostics
-	SocketListener socketListener([](const std::string &s){return ProcessCommand(s);});
+	SocketListener socketListener([](const std::string &s){return Commander.ProcessCommand(s);});
 
 	// Our main objects..
 	FrameGrabber frameGrabber;
@@ -488,10 +488,3 @@ int main(int argc, const char **argv)
 	return exit_code;
 }
 
-/// <summary>
-/// Processes a command received from our TCP socket listener
-/// </summary>
-static std::string ProcessCommand(const std::string &s)
-{
-	return std::string("received command: ") + s;
-}
