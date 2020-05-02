@@ -320,7 +320,8 @@ int main(int argc, const char **argv)
 	int exit_code = EX_OK;
 
 	// add our command handlers
-	Commander.AddHandler("shutdown", [](){ terminateRequested = true; });
+	Commander.AddHandler("shutdown", [](std::string){ terminateRequested = true; return std::string(); });
+	Commander.AddHandler("getImage", [&](std::string){ return frameHandler.GetImageAsString(); });
 
 	MMAL_STATUS_T status = MMAL_SUCCESS;
 
@@ -359,6 +360,7 @@ int main(int argc, const char **argv)
 		{
 			// Enable the camera video port and tell it its callback function
 			status = frameGrabber.SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame) {
+				// process it
 				frameHandler.HandleFrame(frame);
 			});
 
