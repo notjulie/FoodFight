@@ -170,16 +170,8 @@ MMAL_STATUS_T FrameGrabber::CreateCameraComponent(void)
          mmal_port_parameter_set(video_port, &fps_range.hdr);
     }
 
-    if (useRGB)
-    {
-       format->encoding = mmal_util_rgb_order_fixed(still_port) ? MMAL_ENCODING_RGB24 : MMAL_ENCODING_BGR24;
-       format->encoding_variant = 0;  //Irrelevant when not in opaque mode
-    }
-    else
-    {
-       format->encoding = MMAL_ENCODING_I420;
-       format->encoding_variant = MMAL_ENCODING_I420;
-    }
+    format->encoding = mmal_util_rgb_order_fixed(still_port) ? MMAL_ENCODING_RGB24 : MMAL_ENCODING_BGR24;
+    format->encoding_variant = 0;  //Irrelevant when not in opaque mode
 
     format->es->video.width = VCOS_ALIGN_UP(width, 32);
     format->es->video.height = VCOS_ALIGN_UP(height, 16);

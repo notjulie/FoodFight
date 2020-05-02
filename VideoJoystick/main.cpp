@@ -81,10 +81,7 @@ static XREF_T  initial_map[] =
 static int initial_map_size = sizeof(initial_map) / sizeof(initial_map[0]);
 
 
-static void display_valid_parameters(const char *app_name);
-
 /// Command ID's and Structure defining our command line options
-#define CommandHelp         0
 #define CommandWidth        1
 #define CommandHeight       2
 #define CommandFramerate    7
@@ -92,11 +89,9 @@ static void display_valid_parameters(const char *app_name);
 #define CommandCamSelect    12
 #define CommandSettings     13
 #define CommandSensorMode   14
-#define CommandUseRGB       16
 
 static COMMAND_LIST cmdline_commands[] =
 {
-		{ CommandHelp,          "-help",       "?",  "This help information", 0 },
 		{ CommandWidth,         "-width",      "w",  "Set image width <size>. Default 1920", 1 },
 		{ CommandHeight,        "-height",     "h",  "Set image height <size>. Default 1080", 1 },
 		{ CommandFramerate,     "-framerate",  "fps","Specify the frames per second to record", 1},
@@ -104,7 +99,6 @@ static COMMAND_LIST cmdline_commands[] =
 		{ CommandCamSelect,     "-camselect",  "cs", "Select camera <number>. Default 0", 1 },
 		{ CommandSettings,      "-settings",   "set","Retrieve camera settings and write to stdout", 0},
 		{ CommandSensorMode,    "-mode",       "md", "Force sensor mode. 0=auto. See docs for other modes available", 1},
-		{ CommandUseRGB,        "-rgb",        "rgb","Save as RGB data rather than YUV", 0},
 };
 
 static int cmdline_commands_size = sizeof(cmdline_commands) / sizeof(cmdline_commands[0]);
@@ -184,10 +178,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
 		//  We are now dealing with a command line option
 		switch (command_id)
 		{
-		case CommandHelp:
-			display_valid_parameters(basename(argv[0]));
-			return -1;
-
 		case CommandWidth: // Width > 0
 		if (sscanf(argv[i + 1], "%u", &state->width) != 1)
 			valid = 0;
@@ -251,10 +241,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
 			break;
 		}
 
-		case CommandUseRGB: // display lots of data during run
-			state->useRGB = 1;
-			break;
-
 		default:
 		{
 			// Try parsing for any image specific parameters
@@ -283,47 +269,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
 	return 0;
 }
 
-/**
- * Display usage information for the application to stdout
- *
- * @param app_name String to display as the application name
- */
-static void display_valid_parameters(const char *app_name)
-{
-	fprintf(stdout, "Display camera output to display, and optionally saves an uncompressed YUV420 file \n\n");
-	fprintf(stdout, "NOTE: High resolutions and/or frame rates may exceed the bandwidth of the system due\n");
-	fprintf(stdout, "to the large amounts of data being moved to the SD card. This will result in undefined\n");
-	fprintf(stdout, "results in the subsequent file.\n");
-	fprintf(stdout, "The raw file produced contains all the files. Each image in the files will be of size\n");
-	fprintf(stdout, "width*height*1.5, unless width and/or height are not divisible by 16. Use the image size\n");
-	fprintf(stdout, "displayed during the run (in verbose mode) for an accurate value\n");
-
-	fprintf(stdout, "The Linux split command can be used to split up the file to individual frames\n");
-
-	fprintf(stdout, "\nusage: %s [options]\n\n", app_name);
-
-	fprintf(stdout, "Image parameter commands\n\n");
-
-	raspicli_display_help(cmdline_commands, cmdline_commands_size);
-
-	fprintf(stdout, "\n");
-
-	// Now display any help information from the camcontrol code
-	raspicamcontrol_display_help();
-
-	fprintf(stdout, "\n");
-
-	return;
-}
-
-/**
- *  buffer header callback function for camera
- *
- *  Callback will dump buffer data to internal buffer
- *
- * @param port Pointer to port from which callback originated
- * @param buffer mmal buffer header pointer
- */
 
 
 /**
@@ -390,15 +335,6 @@ int main(int argc, const char **argv)
 	signal(SIGUSR1, SIG_IGN);
 
 	default_status(&frameGrabber);
-
-	// Do we have any parameters
-	if (argc == 1)
-	{
-		fprintf(stdout, "\n%s Camera App %s\n\n", basename(argv[0]), VERSION_STRING);
-
-		display_valid_parameters(basename(argv[0]));
-		exit(EX_USAGE);
-	}
 
 	// Parse the command line and put options in to our status structure
 	if (parse_cmdline(argc, argv, &frameGrabber))
