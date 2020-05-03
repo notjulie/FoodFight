@@ -82,9 +82,6 @@ static int initial_map_size = sizeof(initial_map) / sizeof(initial_map[0]);
 
 
 /// Command ID's and Structure defining our command line options
-#define CommandWidth        1
-#define CommandHeight       2
-#define CommandFramerate    7
 #define CommandInitialState 11
 #define CommandCamSelect    12
 #define CommandSettings     13
@@ -92,9 +89,6 @@ static int initial_map_size = sizeof(initial_map) / sizeof(initial_map[0]);
 
 static COMMAND_LIST cmdline_commands[] =
 {
-		{ CommandWidth,         "-width",      "w",  "Set image width <size>. Default 1920", 1 },
-		{ CommandHeight,        "-height",     "h",  "Set image height <size>. Default 1080", 1 },
-		{ CommandFramerate,     "-framerate",  "fps","Specify the frames per second to record", 1},
 		{ CommandInitialState,  "-initial",    "i",  "Initial state. Use 'record' or 'pause'. Default 'record'", 1},
 		{ CommandCamSelect,     "-camselect",  "cs", "Select camera <number>. Default 0", 1 },
 		{ CommandSettings,      "-settings",   "set","Retrieve camera settings and write to stdout", 0},
@@ -122,8 +116,8 @@ static void default_status(FrameGrabber *state)
 	memset(state, 0, sizeof(FrameGrabber));
 
 	// Now set anything non-zero
-	state->width = 1920;       // Default to 1080p
-	state->height = 1080;
+	state->width = 640;       // Default to 1080p
+	state->height = 480;
 	state->framerate = VIDEO_FRAME_RATE_NUM;
 
 	state->bCapturing = 0;
@@ -178,32 +172,6 @@ static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
 		//  We are now dealing with a command line option
 		switch (command_id)
 		{
-		case CommandWidth: // Width > 0
-		if (sscanf(argv[i + 1], "%u", &state->width) != 1)
-			valid = 0;
-		else
-			i++;
-		break;
-
-		case CommandHeight: // Height > 0
-			if (sscanf(argv[i + 1], "%u", &state->height) != 1)
-				valid = 0;
-			else
-				i++;
-			break;
-
-		case CommandFramerate: // fps to record
-		{
-			if (sscanf(argv[i + 1], "%u", &state->framerate) == 1)
-			{
-				// TODO : What limits do we need for fps 1 - 30 - 120??
-				i++;
-			}
-			else
-				valid = 0;
-			break;
-		}
-
 		case CommandInitialState:
 		{
 			state->bCapturing = raspicli_map_xref(argv[i + 1], initial_map, initial_map_size);

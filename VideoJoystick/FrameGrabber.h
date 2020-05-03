@@ -18,7 +18,7 @@ extern "C" {
 
 // Video format information
 // 0 implies variable
-#define VIDEO_FRAME_RATE_NUM 30
+#define VIDEO_FRAME_RATE_NUM 90
 #define VIDEO_FRAME_RATE_DEN 1
 
 // Standard port setting for the camera component
