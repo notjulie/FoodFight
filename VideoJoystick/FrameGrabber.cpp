@@ -14,6 +14,9 @@ static void camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
 
 FrameGrabber::FrameGrabber(void)
 {
+	// Set up the camera_parameters to default
+	memset(&this->camera_parameters, 0, sizeof(this->camera_parameters));
+	raspicamcontrol_set_defaults(&this->camera_parameters);
 }
 
 MMAL_STATUS_T FrameGrabber::SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback)

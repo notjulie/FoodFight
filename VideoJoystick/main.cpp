@@ -99,36 +99,6 @@ static int cmdline_commands_size = sizeof(cmdline_commands) / sizeof(cmdline_com
 
 static bool terminateRequested = false;
 
-/**
- * Assign a default set of parameters to the state passed in
- *
- * @param state Pointer to state structure to assign defaults to
- */
-static void default_status(FrameGrabber *state)
-{
-	if (!state)
-	{
-		vcos_assert(0);
-		return;
-	}
-
-	// Default everything to zero
-	memset(state, 0, sizeof(FrameGrabber));
-
-	// Now set anything non-zero
-	state->width = 640;       // Default to 1080p
-	state->height = 480;
-	state->framerate = VIDEO_FRAME_RATE_NUM;
-
-	state->bCapturing = 0;
-
-	state->cameraNum = 0;
-	state->settings = 0;
-	state->sensor_mode = 0;
-
-	// Set up the camera_parameters to default
-	raspicamcontrol_set_defaults(&state->camera_parameters);
-}
 
 
 /**
@@ -279,6 +249,9 @@ static void signal_handler(int signal_number)
  */
 int main(int argc, const char **argv)
 {
+	// initialize access to the GPU
+	bcm_host_init();
+
 	// set up our socket listener... basically a TCP command line for diagnostics
 	SocketListener socketListener([](const std::string &s){return Commander.ProcessCommand(s);});
 
@@ -293,8 +266,6 @@ int main(int argc, const char **argv)
 
 	MMAL_STATUS_T status = MMAL_SUCCESS;
 
-	bcm_host_init();
-
 	// Register our application with the logging system
 	vcos_log_register("RaspiVid", VCOS_LOG_CATEGORY);
 
@@ -303,7 +274,6 @@ int main(int argc, const char **argv)
 	// Disable USR1 for the moment - may be reenabled if go in to signal capture mode
 	signal(SIGUSR1, SIG_IGN);
 
-	default_status(&frameGrabber);
 
 	// Parse the command line and put options in to our status structure
 	if (parse_cmdline(argc, argv, &frameGrabber))

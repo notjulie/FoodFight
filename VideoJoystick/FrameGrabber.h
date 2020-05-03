@@ -47,21 +47,20 @@ private:
 	static void CameraBufferCallbackEntry(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
 
 public:
-   uint32_t width;                          /// Requested width of image
-   uint32_t height;                         /// requested height of image
-   int framerate;                      /// Requested frame rate (fps)
-
    RASPICAM_CAMERA_PARAMETERS camera_parameters; /// Camera setup parameters
 
-   MMAL_POOL_T *camera_pool;            /// Pointer to the pool of buffers used by camera video port
+   MMAL_POOL_T *camera_pool = nullptr;            /// Pointer to the pool of buffers used by camera video port
 
-   int bCapturing;                      /// State of capture/pause
+   int bCapturing = 0;                      /// State of capture/pause
 
-   int cameraNum;                       /// Camera number
-   int settings;                        /// Request settings from the camera
-   int sensor_mode;                     /// Sensor mode. 0=auto. Check docs/forum for modes selected by other values.
+   int cameraNum = 0;                       /// Camera number
+   int settings = 0;                        /// Request settings from the camera
+   int sensor_mode = 0;                     /// Sensor mode. 0=auto. Check docs/forum for modes selected by other values.
 
 private:
+   uint32_t width = 640;                          /// Requested width of image
+   uint32_t height = 480;                         /// requested height of image
+   int framerate = VIDEO_FRAME_RATE_NUM;                      /// Requested frame rate (fps)
    MMAL_COMPONENT_T *camera_component = nullptr;    /// Pointer to the camera component
    std::function<void(const std::shared_ptr<VideoFrame> &)> frameCallback;
 };
