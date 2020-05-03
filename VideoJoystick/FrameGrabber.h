@@ -37,6 +37,7 @@ public:
 	void DisableCamera(void);
 	void DestroyCameraComponent(void);
 	MMAL_STATUS_T SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback);
+	void StartCapturing(void);
 
 	MMAL_PORT_T *GetVideoPort(void) { return camera_component->output[MMAL_CAMERA_VIDEO_PORT]; }
 
@@ -47,9 +48,10 @@ private:
 	static void CameraBufferCallbackEntry(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
 
 public:
-   RASPICAM_CAMERA_PARAMETERS camera_parameters; /// Camera setup parameters
-
    MMAL_POOL_T *camera_pool = nullptr;            /// Pointer to the pool of buffers used by camera video port
+
+private:
+   RASPICAM_CAMERA_PARAMETERS camera_parameters; /// Camera setup parameters
 
    int bCapturing = 0;                      /// State of capture/pause
 

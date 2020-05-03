@@ -102,114 +102,6 @@ static bool terminateRequested = false;
 
 
 /**
- * Parse the incoming command line and put resulting parameters in to the state
- *
- * @param argc Number of arguments in command line
- * @param argv Array of pointers to strings from command line
- * @param state Pointer to state structure to assign any discovered parameters to
- * @return Non-0 if failed for some reason, 0 otherwise
- */
-static int parse_cmdline(int argc, const char **argv, FrameGrabber *state)
-{
-	// Parse the command line arguments.
-	// We are looking for --<something> or -<abbreviation of something>
-
-	int valid = 1;
-	int i;
-
-	for (i = 1; i < argc && valid; i++)
-	{
-		int command_id, num_parameters;
-
-		if (!argv[i])
-			continue;
-
-		if (argv[i][0] != '-')
-		{
-			valid = 0;
-			continue;
-		}
-
-		// Assume parameter is valid until proven otherwise
-		valid = 1;
-
-		command_id = raspicli_get_command_id(cmdline_commands, cmdline_commands_size, &argv[i][1], &num_parameters);
-
-		// If we found a command but are missing a parameter, continue (and we will drop out of the loop)
-		if (command_id != -1 && num_parameters > 0 && (i + 1 >= argc) )
-			continue;
-
-		//  We are now dealing with a command line option
-		switch (command_id)
-		{
-		case CommandInitialState:
-		{
-			state->bCapturing = raspicli_map_xref(argv[i + 1], initial_map, initial_map_size);
-
-			if( state->bCapturing == -1)
-				state->bCapturing = 0;
-
-			i++;
-			break;
-		}
-
-		case CommandCamSelect:  //Select camera input port
-		{
-			if (sscanf(argv[i + 1], "%u", &state->cameraNum) == 1)
-			{
-				i++;
-			}
-			else
-				valid = 0;
-			break;
-		}
-
-		case CommandSettings:
-			state->settings = 1;
-			break;
-
-		case CommandSensorMode:
-		{
-			if (sscanf(argv[i + 1], "%u", &state->sensor_mode) == 1)
-			{
-				i++;
-			}
-			else
-				valid = 0;
-			break;
-		}
-
-		default:
-		{
-			// Try parsing for any image specific parameters
-			// result indicates how many parameters were used up, 0,1,2
-			// but we adjust by -1 as we have used one already
-			const char *second_arg = (i + 1 < argc) ? argv[i + 1] : NULL;
-			int parms_used = (raspicamcontrol_parse_cmdline(&state->camera_parameters, &argv[i][1], second_arg));
-
-			// If no parms were used, this must be a bad parameters
-			if (!parms_used)
-				valid = 0;
-			else
-				i += parms_used - 1;
-
-			break;
-		}
-		}
-	}
-
-	if (!valid)
-	{
-		fprintf(stderr, "Invalid command line option (%s)\n", argv[i-1]);
-		return 1;
-	}
-
-	return 0;
-}
-
-
-
-/**
  * Checks if specified port is valid and enabled, then disables it
  *
  * @param port  Pointer the port
@@ -275,16 +167,7 @@ int main(int argc, const char **argv)
 	signal(SIGUSR1, SIG_IGN);
 
 
-	// Parse the command line and put options in to our status structure
-	if (parse_cmdline(argc, argv, &frameGrabber))
-	{
-		status = (MMAL_STATUS_T)-1;
-		exit(EX_USAGE);
-	}
-
-	// OK, we have a nice set of parameters. Now set up our components
-	// We have two components. Camera, Preview
-
+	// Now set up our components
 	if ((status = frameGrabber.CreateCameraComponent()) != MMAL_SUCCESS)
 	{
 		vcos_log_error("%s: Failed to create camera component", __func__);
@@ -324,22 +207,13 @@ int main(int argc, const char **argv)
 				}
 			}
 
+			// start grabbing frames
+			frameGrabber.StartCapturing();
+
+			// watch for signal to exit
 			while (!terminateRequested)
 			{
-				// Change state
-
-				frameGrabber.bCapturing = !frameGrabber.bCapturing;
-
-				if (mmal_port_parameter_set_boolean(frameGrabber.GetVideoPort(), MMAL_PARAMETER_CAPTURE, frameGrabber.bCapturing) != MMAL_SUCCESS)
-				{
-					// How to handle?
-				}
-
-				// watch for signal to exit... currently just an infinite loop
-				while (!terminateRequested)
-				{
-					vcos_sleep(ABORT_INTERVAL);
-				}
+				vcos_sleep(ABORT_INTERVAL);
 			}
 		}
 		else

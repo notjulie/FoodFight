@@ -26,6 +26,17 @@ MMAL_STATUS_T FrameGrabber::SetupFrameCallback(const std::function<void(const st
     return mmal_port_enable(GetVideoPort(), CameraBufferCallbackEntry);
 }
 
+void FrameGrabber::StartCapturing(void)
+{
+	bCapturing = 1;
+
+	if (mmal_port_parameter_set_boolean(GetVideoPort(), MMAL_PARAMETER_CAPTURE, bCapturing) != MMAL_SUCCESS)
+	{
+		// How to handle?
+	}
+}
+
+
 
 /// <summary>
 /// Static camera callback that just dispatches to our non-static version
