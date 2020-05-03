@@ -6,7 +6,11 @@
         xmlns:local="clr-namespace:JoystickMonitor"
         mc:Ignorable="d"
         Title="MainWindow" Height="450" Width="800">
-   <Grid>
-      <Button x:Name="shutdownButton" Width="100" Height="50">Shutdown</Button>
-   </Grid>
+   <DockPanel>
+      <StackPanel Orientation="Horizontal" DockPanel.Dock="Top" HorizontalAlignment="Center">
+         <Button x:Name="shutdownButton" Width="100" Height="50">Shutdown</Button>
+         <Button x:Name="getImageButton" Width="100" Height="50">Get Image</Button>
+      </StackPanel>
+      <Image x:Name="image"/>
+   </DockPanel>
 </Window>
