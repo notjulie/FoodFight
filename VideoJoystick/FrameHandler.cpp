@@ -57,7 +57,7 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 		std::lock_guard<std::mutex> lock(frameRequestMutex);
 		while (!frameRequestQueue.empty())
 		{
-			frameRequestQueue.front().set_value("dog pucky");
+			frameRequestQueue.front().set_value(frame->ToString());
 			frameRequestQueue.pop_front();
 		}
 	}

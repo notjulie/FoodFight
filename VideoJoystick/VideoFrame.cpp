@@ -18,3 +18,17 @@ VideoFrame::VideoFrame(MMAL_BUFFER_HEADER_T *buffer)
 }
 
 
+/// <summary>
+/// Packages it up as a string for the benefit of text-based streams
+/// </summary>
+std::string VideoFrame::ToString(void) const
+{
+	std::string result;
+	for (uint8_t b : pixelData)
+	{
+		result += 'A' + (b>>4);
+		result += 'A' + (b&0xF);
+	}
+	return result;
+}
+
