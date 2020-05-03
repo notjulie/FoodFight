@@ -41,6 +41,8 @@
 
 #define VERSION_STRING "v1.3.15"
 
+#include <bcm2835.h>
+
 #include "bcm_host.h"
 #include "interface/vcos/vcos.h"
 
@@ -119,6 +121,13 @@ int main(int argc, const char **argv)
 {
 	// initialize access to the GPU
 	bcm_host_init();
+
+	// initialize the bcm2835 library
+	if (!bcm2835_init())
+	{
+		printf("Error initializing bcm2835 library\n");
+		return -1;
+	}
 
 	// set up our socket listener... basically a TCP command line for diagnostics
 	SocketListener socketListener([](const std::string &s){return Commander.ProcessCommand(s);});

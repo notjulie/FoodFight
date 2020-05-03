@@ -45,6 +45,7 @@
 							<tool id="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug.178304084" name="GCC C++ Linker" superClass="cdt.managedbuild.tool.gnu.cpp.linker.exe.debug">
 								<option id="gnu.cpp.link.option.libs.295896051" name="Libraries (-l)" superClass="gnu.cpp.link.option.libs" valueType="libs">
 									<listOptionValue builtIn="false" value="vcos"/>
+									<listOptionValue builtIn="false" value="bcm2835"/>
 									<listOptionValue builtIn="false" value="bcm_host"/>
 									<listOptionValue builtIn="false" value="vchiq_arm"/>
 									<listOptionValue builtIn="false" value="vchostif"/>
@@ -68,9 +69,6 @@
 							</tool>
 						</toolChain>
 					</folderInfo>
-					<fileInfo id="cdt.managedbuild.config.gnu.exe.debug.1576879275.1083211581" name="RaspiPreview.c" rcbsApplicability="disable" resourcePath="raspicam/RaspiPreview.c" toolsToInvoke="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.64957952.267356052">
-						<tool id="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.64957952.267356052" name="GCC C Compiler" superClass="cdt.managedbuild.tool.gnu.c.compiler.exe.debug.64957952"/>
-					</fileInfo>
 					<sourceEntries>
 						<entry excluding="raspicam/RaspiPreview.c|raspicam/imv_examples|raspicam/RaspiVidYUV.c|raspicam/RaspiTexUtil.c|raspicam/RaspiTex.c|raspicam/RaspiVid.c|raspicam/RaspiStillYUV.c|raspicam/RaspiStill.c|raspicam/gl_scenes" flags="VALUE_WORKSPACE_PATH|RESOLVED" kind="sourcePath" name=""/>
 					</sourceEntries>
@@ -154,4 +152,5 @@
 			<resource resourceType="PROJECT" workspacePath="/VideoJoystick"/>
 		</configuration>
 	</storageModule>
+	<storageModule moduleId="org.eclipse.cdt.internal.ui.text.commentOwnerProjectMappings"/>
 </cproject>
