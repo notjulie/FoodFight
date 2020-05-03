@@ -52,8 +52,8 @@
 #include "interface/mmal/util/mmal_connection.h"
 
 extern "C" {
-#include "RaspiCamControl.h"
-#include "RaspiCLI.h"
+	#include "RaspiCamControl.h"
+	#include "RaspiCLI.h"
 };
 
 #include <semaphore.h>
@@ -68,34 +68,10 @@ const int ABORT_INTERVAL = 100; // ms
 
 
 extern "C" {
-int mmal_status_to_int(MMAL_STATUS_T status);
-static void signal_handler(int signal_number);
+	int mmal_status_to_int(MMAL_STATUS_T status);
+	static void signal_handler(int signal_number);
 };
 
-static XREF_T  initial_map[] =
-{
-		{"record",     0},
-		{"pause",      1},
-};
-
-static int initial_map_size = sizeof(initial_map) / sizeof(initial_map[0]);
-
-
-/// Command ID's and Structure defining our command line options
-#define CommandInitialState 11
-#define CommandCamSelect    12
-#define CommandSettings     13
-#define CommandSensorMode   14
-
-static COMMAND_LIST cmdline_commands[] =
-{
-		{ CommandInitialState,  "-initial",    "i",  "Initial state. Use 'record' or 'pause'. Default 'record'", 1},
-		{ CommandCamSelect,     "-camselect",  "cs", "Select camera <number>. Default 0", 1 },
-		{ CommandSettings,      "-settings",   "set","Retrieve camera settings and write to stdout", 0},
-		{ CommandSensorMode,    "-mode",       "md", "Force sensor mode. 0=auto. See docs for other modes available", 1},
-};
-
-static int cmdline_commands_size = sizeof(cmdline_commands) / sizeof(cmdline_commands[0]);
 
 static bool terminateRequested = false;
 
