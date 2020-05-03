@@ -10,14 +10,6 @@ CommandProcessor::CommandProcessor(void)
 }
 
 
-void CommandProcessor::AddHandler(const std::string &command, const std::function<void()> &handler)
-{
-   AddHandler(command, [handler](const std::string &params) {
-	  handler();
-	  return "";
-   });
-}
-
 void CommandProcessor::AddHandler(const std::string &command, const std::function<std::string (const std::string &)> &handler)
 {
    std::lock_guard<std::mutex> lock(mutex);

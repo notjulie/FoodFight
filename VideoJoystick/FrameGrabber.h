@@ -51,8 +51,6 @@ public:
    uint32_t height;                         /// requested height of image
    int framerate;                      /// Requested frame rate (fps)
 
-   int useRGB;                         /// Output RGB data rather than YUV
-
    RASPICAM_CAMERA_PARAMETERS camera_parameters; /// Camera setup parameters
 
    MMAL_POOL_T *camera_pool;            /// Pointer to the pool of buffers used by camera video port

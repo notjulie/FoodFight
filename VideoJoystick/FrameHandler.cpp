@@ -52,6 +52,40 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 		p += 3;
 	}
 
-	if (rSum > 0)
-		printf("%d,%d\n", (int)(xSum/rSum), (int)(ySum/rSum));
+	// process any requests for frames from TCP clients
+	{
+		std::lock_guard<std::mutex> lock(frameRequestMutex);
+		while (!frameRequestQueue.empty())
+		{
+			frameRequestQueue.front().set_value("dog pucky");
+			frameRequestQueue.pop_front();
+		}
+	}
 }
+
+
+/// <summary>
+/// Returns an image as a string, so that we can report it over out TCP socket.
+/// This makes a request to whatever thread the camera runs on and waits on the
+/// request.
+/// </summary>
+std::string FrameHandler::GetImageAsString(void)
+{
+	// create the request
+	std::promise<std::string> frameRequest;
+
+	// get the associated future that will return the result
+	std::future<std::string> future = frameRequest.get_future();
+
+	// pop it in the queue
+	{
+		std::lock_guard<std::mutex> lock(frameRequestMutex);
+		frameRequestQueue.push_back(std::move(frameRequest));
+	}
+
+	// wait and return the result
+	return future.get();
+}
+
+
+

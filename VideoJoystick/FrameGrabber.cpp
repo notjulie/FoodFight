@@ -24,6 +24,9 @@ MMAL_STATUS_T FrameGrabber::SetupFrameCallback(const std::function<void(const st
 }
 
 
+/// <summary>
+/// Static camera callback that just dispatches to our non-static version
+/// </summary>
 void FrameGrabber::CameraBufferCallbackEntry(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
    FrameGrabber *pThis = (FrameGrabber *)port->userdata;
@@ -31,6 +34,10 @@ void FrameGrabber::CameraBufferCallbackEntry(MMAL_PORT_T *port, MMAL_BUFFER_HEAD
 	   pThis->CameraBufferCallback(port, buffer);
 }
 
+
+/// <summary>
+/// Processes the camera buffer
+/// </summary>
 void FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	// create a VideoFrame from the buffer; this way the frame handler can do whatever
@@ -170,16 +177,8 @@ MMAL_STATUS_T FrameGrabber::CreateCameraComponent(void)
          mmal_port_parameter_set(video_port, &fps_range.hdr);
     }
 
-    if (useRGB)
-    {
-       format->encoding = mmal_util_rgb_order_fixed(still_port) ? MMAL_ENCODING_RGB24 : MMAL_ENCODING_BGR24;
-       format->encoding_variant = 0;  //Irrelevant when not in opaque mode
-    }
-    else
-    {
-       format->encoding = MMAL_ENCODING_I420;
-       format->encoding_variant = MMAL_ENCODING_I420;
-    }
+    format->encoding = mmal_util_rgb_order_fixed(still_port) ? MMAL_ENCODING_RGB24 : MMAL_ENCODING_BGR24;
+    format->encoding_variant = 0;  //Irrelevant when not in opaque mode
 
     format->es->video.width = VCOS_ALIGN_UP(width, 32);
     format->es->video.height = VCOS_ALIGN_UP(height, 16);
