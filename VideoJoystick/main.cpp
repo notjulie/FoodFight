@@ -129,6 +129,13 @@ int main(int argc, const char **argv)
 		return -1;
 	}
 
+	bcm2835_pwm_set_data(18, BCM2835_GPIO_FSEL_ALT5);
+
+	bcm2835_pwm_set_clock(1000);
+	bcm2835_pwm_set_mode(0,1,1);
+	bcm2835_pwm_set_range(0,1024);
+	bcm2835_pwm_set_data(0,300);
+
 	// set up our socket listener... basically a TCP command line for diagnostics
 	SocketListener socketListener([](const std::string &s){return Commander.ProcessCommand(s);});
 
@@ -221,6 +228,7 @@ int main(int argc, const char **argv)
 	if (status != MMAL_SUCCESS)
 		raspicamcontrol_check_configuration(128);
 
+	bcm2835_close();
 	return exit_code;
 }
 
