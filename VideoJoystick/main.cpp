@@ -59,10 +59,13 @@ extern "C" {
 };
 
 #include <semaphore.h>
+
+// project includes
 #include "CommandProcessor.h"
 #include "FrameGrabber.h"
 #include "FrameHandler.h"
 #include "SocketListener.h"
+#include "SPIDAC.h"
 
 
 /// Interval at which we check for an failure abort during capture
@@ -139,13 +142,31 @@ int main(int argc, const char **argv)
 	// set up our socket listener... basically a TCP command line for diagnostics
 	SocketListener socketListener([](const std::string &s){return Commander.ProcessCommand(s);});
 
+	// add our command handlers
+	Commander.AddHandler("shutdown", [](std::string){ terminateRequested = true; return std::string(); });
+
+	// initialize the SPIDAC and add a couple commands
+	SPIDAC spiDac;
+	Commander.AddHandler("setX", [&spiDac](std::string param){ spiDac.sendX(atol(param.c_str())); return std::string(); });
+	Commander.AddHandler("setY", [&spiDac](std::string param){ terminateRequested = true; spiDac.sendY(atol(param.c_str())); return std::string(); });
+
+	// testing... a loop that lets the SocketListener run but doesn't
+	// bother with ant of the camera stuff
+#if 1
+	for (;;)
+	{
+		if (terminateRequested)
+			return 0;
+		std::this_thread::sleep_for(std::chrono::seconds(1));
+	}
+#endif
+
 	// Our main objects..
 	FrameGrabber frameGrabber;
 	FrameHandler frameHandler;
 	int exit_code = EX_OK;
 
-	// add our command handlers
-	Commander.AddHandler("shutdown", [](std::string){ terminateRequested = true; return std::string(); });
+	// command handlers supported by camera functions
 	Commander.AddHandler("getImage", [&](std::string){ return frameHandler.GetImageAsString(); });
 
 	MMAL_STATUS_T status = MMAL_SUCCESS;
