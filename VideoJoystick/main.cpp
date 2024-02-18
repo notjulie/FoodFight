@@ -139,19 +139,23 @@ int main(int argc, const char **argv)
 	bcm2835_pwm_set_range(0,1024);
 	bcm2835_pwm_set_data(0,300);
 
-	// set up our socket listener... basically a TCP command line for diagnostics
-	SocketListener socketListener([](const std::string &s){return Commander.ProcessCommand(s);});
+	// create a command handler; we can add commands to it as we go along
+	CommandProcessor commander;
+
+	// set up our socket listener and tell it how to process commands it receives...
+	// this is basically a TCP command line for diagnostics
+	SocketListener socketListener([&commander](const std::string &s){return commander.ProcessCommand(s);});
 
 	// add our command handlers
-	Commander.AddHandler("shutdown", [](std::string){ terminateRequested = true; return std::string(); });
+	commander.AddHandler("shutdown", [](std::string){ terminateRequested = true; return std::string(); });
 
 	// initialize the SPIDAC and add a couple commands
 	SPIDAC spiDac;
-	Commander.AddHandler("setX", [&spiDac](std::string param){ spiDac.sendX(atol(param.c_str())); return std::string(); });
-	Commander.AddHandler("setY", [&spiDac](std::string param){ terminateRequested = true; spiDac.sendY(atol(param.c_str())); return std::string(); });
+	commander.AddHandler("setX", [&spiDac](std::string param){ spiDac.sendX(atol(param.c_str())); return std::string(); });
+	commander.AddHandler("setY", [&spiDac](std::string param){ terminateRequested = true; spiDac.sendY(atol(param.c_str())); return std::string(); });
 
 	// testing... a loop that lets the SocketListener run but doesn't
-	// bother with ant of the camera stuff
+	// bother with any of the camera stuff
 #if 1
 	for (;;)
 	{
@@ -167,7 +171,7 @@ int main(int argc, const char **argv)
 	int exit_code = EX_OK;
 
 	// command handlers supported by camera functions
-	Commander.AddHandler("getImage", [&](std::string){ return frameHandler.GetImageAsString(); });
+	commander.AddHandler("getImage", [&](std::string){ return frameHandler.GetImageAsString(); });
 
 	MMAL_STATUS_T status = MMAL_SUCCESS;
 

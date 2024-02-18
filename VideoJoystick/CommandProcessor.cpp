@@ -1,15 +1,16 @@
+//
+// Author: Randy Rasmussen
+// Copyright: none, use as you will
+// Warantee: none, your own risk
+//
 
 #include "CommandProcessor.h"
 
 
-CommandProcessor Commander;
-
-
-CommandProcessor::CommandProcessor(void)
-{
-}
-
-
+/// <summary>
+/// Adds a handler for the given command to our list of handlers; overwrites
+/// any existing handler for that command
+/// </summary>
 void CommandProcessor::AddHandler(const std::string &command, const std::function<std::string (const std::string &)> &handler)
 {
    std::lock_guard<std::mutex> lock(mutex);
@@ -17,6 +18,11 @@ void CommandProcessor::AddHandler(const std::string &command, const std::functio
 }
 
 
+/// <summary>
+/// Processes the given command, returning a string result.  For a command line
+/// of "bleem 42 7", the handler for "bleem" is located and called with the
+/// parameter "42 7".
+/// </summary>
 std::string CommandProcessor::ProcessCommand(const std::string &_command)
 {
 	// split the command into a command and a parameter string
@@ -33,6 +39,7 @@ std::string CommandProcessor::ProcessCommand(const std::string &_command)
 		parameters.append(_command.begin() + spacePosition + 1, _command.end());
 	}
 
+	// find the handler
 	Handler handler;
 	bool found = false;
 	{
@@ -45,6 +52,7 @@ std::string CommandProcessor::ProcessCommand(const std::string &_command)
 		}
 	}
 
+	// execute if found
 	if (found)
 	{
 		return handler(parameters);

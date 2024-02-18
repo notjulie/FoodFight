@@ -140,10 +140,6 @@ void SocketListener::ListenToClient(int client)
       // a result of zero means an orderly shutdown of the socket
       if (recvResult == 0)
       {
-         continue;
-      }
-      else if (recvResult == 0)
-      {
          break;
       }
       else if (recvResult == -1)
