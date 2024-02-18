@@ -1,3 +1,8 @@
+//
+// Author: Randy Rasmussen
+// Copyright: none, use as you will
+// Warantee: none, your own risk
+//
 
 #include "SocketListener.h"
 
@@ -8,15 +13,17 @@
 #include <unistd.h>
 
 
+// =======================================================
+//   class SocketListener
+// =======================================================
 
+/// <summary>
+/// Initializes a new instance of class SocketListener
+/// </summary>
 SocketListener::SocketListener(const std::function<std::string(const std::string &)> &handler)
 {
    // copy parameters
    this->handler = handler;
-
-   // clear
-   terminated = false;
-   theSocket = -1;
 
    // start our listener
    connectionThread = new std::thread(
@@ -25,7 +32,10 @@ SocketListener::SocketListener(const std::function<std::string(const std::string
 }
 
 
-SocketListener::~SocketListener(void)
+/// <summary>
+/// Releases resources held by the object
+/// </summary>
+SocketListener::~SocketListener()
 {
    // signal that we are terminating
    terminated = true;
@@ -37,25 +47,48 @@ SocketListener::~SocketListener(void)
       close(theSocket);
    }
 
-   // destroy threads
+   // destroy our thread
    if (connectionThread != NULL)
    {
       connectionThread->join();
       delete connectionThread;
    }
-   for (unsigned i=0; i<clientThreads.size(); ++i)
-   {
-      clientThreads[i]->join();
-      delete clientThreads[i];
-   }
+
+   // destroy an open connections
+   for (auto connection : connections)
+      delete connection;
 }
 
+
+/// <summary>
+/// our listener thread; listens to incoming connection requests and
+/// aceepts them
+/// </summary>
 void SocketListener::ListenForConnections(void)
 {
    bool bound = false;
 
    while (!terminated)
    {
+      // clear out any dead connections from our list
+      {
+         std::lock_guard<std::mutex> lock(clientListMutex);
+         size_t i = 0;
+         while (i < connections.size())
+         {
+            if (connections[i]->IsActive())
+            {
+               ++i;
+            }
+            else
+            {
+               delete connections[i];
+               connections[i] = connections[connections.size() - 1];
+               connections.pop_back();
+            }
+         }
+      }
+
       // create the socket if necessary
       if (theSocket == -1)
       {
@@ -90,20 +123,53 @@ void SocketListener::ListenForConnections(void)
          int newConnection = accept(theSocket, NULL, NULL);
          if (newConnection != -1)
          {
-            // launch a thread to run the client
-            std::thread *clientThread = new std::thread(
-               [=]() { ListenToClient(newConnection); }
-               );
-
-            // add to the list
+            // create a connection and add it to the list
             std::lock_guard<std::mutex> lock(clientListMutex);
-            clientThreads.push_back(clientThread);
+            connections.push_back(new SocketListenerConnection(newConnection, handler));
          }
       }
    }
 }
 
-void SocketListener::ListenToClient(int client)
+
+// =======================================================
+//   class SocketListenerConnection
+// =======================================================
+
+
+/// <summary>
+/// Initializes a new instance of SocketListenerConnection
+/// </summary>
+SocketListenerConnection::SocketListenerConnection(int clientSocket, const std::function<std::string(const std::string &)> &handler)
+{
+   // copy parameters
+   this->clientSocket = clientSocket;
+   this->handler = handler;
+
+   // start our listener
+   listenThread = new std::thread(
+      [this]() {
+         ListenToClient();
+         active = false;
+      }
+      );
+}
+
+
+/// <summary>
+/// Releases resources held by the object
+/// </summary>
+SocketListenerConnection::~SocketListenerConnection()
+{
+   this->terminated = true;
+   this->listenThread->join();
+}
+
+
+/// <summary>
+/// listens to incoming commands and processes them
+/// </summary>
+void SocketListenerConnection::ListenToClient()
 {
    std::string command;
 
@@ -111,7 +177,7 @@ void SocketListener::ListenToClient(int client)
    {
       // read from the connection
       uint8_t b;
-      int recvResult = recv(client, &b, 1, MSG_DONTWAIT);
+      int recvResult = recv(clientSocket, &b, 1, MSG_DONTWAIT);
 
       // a result of 1 means we got something
       if (recvResult == 1)
@@ -122,7 +188,7 @@ void SocketListener::ListenToClient(int client)
             {
                std::string response = handler(command);
                response += "\r\n";
-               send(client, response.c_str(), response.size(), 0);
+               send(clientSocket, response.c_str(), response.size(), 0);
                command = std::string();
                break;
             }
@@ -155,6 +221,6 @@ void SocketListener::ListenToClient(int client)
       break;
    }
 
-   shutdown(client, SHUT_RDWR);
-   close(client);
+   shutdown(clientSocket, SHUT_RDWR);
+   close(clientSocket);
 }
