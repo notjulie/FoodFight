@@ -1,0 +1,4 @@
+(fp_lib_table
+  (version 7)
+  (lib (name "FoodFight")(type "KiCad")(uri "/Users/randyrasmussen/Dev/FoodFight/VideoJoystick/Schematic")(options "")(descr ""))
+)
