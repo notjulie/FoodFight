@@ -156,7 +156,7 @@ int main(int argc, const char **argv)
 
 	// testing... a loop that lets the SocketListener run but doesn't
 	// bother with any of the camera stuff
-#if 1
+#if 0
 	for (;;)
 	{
 		if (terminateRequested)

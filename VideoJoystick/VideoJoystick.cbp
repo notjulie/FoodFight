@@ -1,0 +1,168 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<CodeBlocks_project_file>
+	<FileVersion major="1" minor="6" />
+	<Project>
+		<Option title="VideoJoystick" />
+		<Option pch_mode="2" />
+		<Option compiler="gcc" />
+		<Build>
+			<Target title="Debug">
+				<Option output="bin/Debug/VideoJoystick" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Debug/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-g" />
+				</Compiler>
+			</Target>
+			<Target title="Release">
+				<Option output="bin/Release/VideoJoystick" prefix_auto="1" extension_auto="1" />
+				<Option object_output="obj/Release/" />
+				<Option type="1" />
+				<Option compiler="gcc" />
+				<Compiler>
+					<Add option="-O2" />
+				</Compiler>
+				<Linker>
+					<Add option="-s" />
+				</Linker>
+			</Target>
+		</Build>
+		<Compiler>
+			<Add option="-Wall" />
+			<Add option="-fexceptions" />
+			<Add option="-DUSE_VCHIQ_ARM" />
+			<Add directory="../dependencies/userland/host_applications/linux/libs/bcm_host/include" />
+			<Add directory="../dependencies/userland" />
+			<Add directory="../dependencies/userland/host_applications/linux/apps/raspicam" />
+			<Add directory="../dependencies/userland/interface/mmal" />
+			<Add directory="../dependencies/userland/interface/vcos" />
+			<Add directory="../dependencies/userland/interface/vchiq_arm" />
+		</Compiler>
+		<Linker>
+			<Add library="bcm2835" />
+		</Linker>
+		<Unit filename="../dependencies/userland/host_applications/linux/apps/raspicam/RaspiCLI.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/host_applications/linux/apps/raspicam/RaspiCamControl.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/host_applications/linux/apps/raspicam/RaspiCommonSettings.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/host_applications/linux/apps/raspicam/RaspiHelpers.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/host_applications/linux/apps/raspicam/RaspiPreview.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/host_applications/linux/libs/bcm_host/bcm_host.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/core/mmal_buffer.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/core/mmal_component.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/core/mmal_events.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/core/mmal_format.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/core/mmal_logging.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/core/mmal_pool.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/core/mmal_port.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/core/mmal_queue.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/util/mmal_connection.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/util/mmal_util.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/util/mmal_util_params.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/util/mmal_util_rational.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/vc/mmal_vc_api.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/vc/mmal_vc_client.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/vc/mmal_vc_opaque_alloc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/mmal/vc/mmal_vc_shm.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vchiq_arm/vchiq_lib.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/generic/vcos_abort.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/generic/vcos_generic_blockpool.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/generic/vcos_generic_named_sem.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/generic/vcos_generic_safe_string.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/generic/vcos_init.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/generic/vcos_logcat.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/generic/vcos_mem_from_malloc.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/generic/vcos_msgqueue.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/glibc/vcos_backtrace.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vcos/pthreads/vcos_pthreads.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vmcs_host/vc_service_common.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vmcs_host/vc_vchi_cecservice.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vmcs_host/vc_vchi_dispmanx.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vmcs_host/vc_vchi_gencmd.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="../dependencies/userland/interface/vmcs_host/vc_vchi_tvservice.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="CommandProcessor.cpp" />
+		<Unit filename="FrameGrabber.cpp" />
+		<Unit filename="FrameHandler.cpp" />
+		<Unit filename="SPIDAC.cpp" />
+		<Unit filename="SocketListener.cpp" />
+		<Unit filename="VideoFrame.cpp" />
+		<Unit filename="main.cpp" />
+		<Extensions />
+	</Project>
+</CodeBlocks_project_file>
