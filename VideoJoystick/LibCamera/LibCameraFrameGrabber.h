@@ -23,7 +23,11 @@ private:
    LibCameraFrameGrabber();
 
    void configureCamera();
+   void onRequestCompleted(libcamera::Request *request);
    void openUniqueCamera();
+
+private:
+   static void requestCompletedCallback(libcamera::Request *request) { ((LibCameraFrameGrabber*)request->cookie())->onRequestCompleted(request); }
 
 private:
    std::mutex mutex;
@@ -32,6 +36,7 @@ private:
    std::unique_ptr<libcamera::CameraConfiguration> cameraConfiguration;
    std::unique_ptr<libcamera::FrameBufferAllocator> frameBufferAllocator;
    std::vector<std::unique_ptr<libcamera::Request>> requests;
+   int frameCount = 0;
 };
 
 #endif // LIBCAMERA_FRAMEGRABBER_H

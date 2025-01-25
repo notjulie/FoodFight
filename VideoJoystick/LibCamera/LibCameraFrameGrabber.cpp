@@ -22,6 +22,9 @@ LibCameraFrameGrabber::LibCameraFrameGrabber()
 /// </summary>
 LibCameraFrameGrabber::~LibCameraFrameGrabber()
 {
+   // make sure to stop acquiring images first
+   if (camera)
+      camera->stop();
 }
 
 
@@ -94,20 +97,42 @@ void LibCameraFrameGrabber::startCapturing()
    // create our buffer allocator
    frameBufferAllocator.reset(new libcamera::FrameBufferAllocator(camera));
 
+   // set our callback
+   camera->requestCompleted.connect(requestCompletedCallback);
+
    int buffersAllocated = frameBufferAllocator->allocate(stream);
    if (buffersAllocated <= 0)
       throw std::runtime_error("LibCameraFrameGrabber::startCapturing: allocate failed");
    std::cout << "Allocated " << buffersAllocated << " buffers" << std::endl;
 
+   if (0 != camera->start())
+      throw std::runtime_error("LibCameraFrameGrabber::startCapturing: start failed");
+
    for (int i=0; i<buffersAllocated; ++i)
    {
-      std::unique_ptr<libcamera::Request> request = camera->createRequest();
+      std::unique_ptr<libcamera::Request> request = camera->createRequest((uint64_t)this);
       if (!request)
          throw std::runtime_error("LibCameraFrameGrabber::startCapturing: createRequest failed");
       if (0 != request->addBuffer(stream, frameBufferAllocator->buffers(stream)[i].get()))
          throw std::runtime_error("LibCameraFrameGrabber::startCapturing: addBuffer failed");
+      if (0 != camera->queueRequest(request.get()))
+         throw std::runtime_error("LibCameraFrameGrabber::startCapturing: queueRequest failed");
       requests.push_back(std::move(request));
    }
 }
 
+
+/// <summary>
+/// does processing associated with the completion of a request
+/// </summary>
+void LibCameraFrameGrabber::onRequestCompleted(libcamera::Request *request)
+{
+   ++frameCount;
+   if ((frameCount % 60) == 0)
+      std::cout << frameCount << std::endl;
+
+   request->reuse(libcamera::Request::ReuseBuffers);
+   if (0 != camera->queueRequest(request))
+      throw std::runtime_error("LibCameraFrameGrabber::onRequestCompleted: queueRequest failed");
+}
 

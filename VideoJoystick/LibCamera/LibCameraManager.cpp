@@ -29,20 +29,3 @@ std::shared_ptr<libcamera::CameraManager> LibCameraManager::Initialize()
    return cameraManager;
 }
 
-#include <unistd.h>
-
-namespace libcamera
-{
-   /// <summary>
-   /// For some reason this is missing from the supplied libcamera; I
-   /// just include it here.
-   /// </summary>
-   void UniqueFD::reset(int fd)
-   {
-      std::swap(fd, fd_);
-      if (fd >= 0)
-         close(fd);
-   }
-}
-
-
