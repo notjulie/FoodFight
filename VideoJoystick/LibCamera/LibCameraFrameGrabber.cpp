@@ -54,4 +54,60 @@ void LibCameraFrameGrabber::openUniqueCamera()
    if (!this->camera)
       throw std::runtime_error("LibCameraFrameGrabber::openUniqueCamera: error getting camera");
    this->camera->acquire();
+
+   // configure
+   configureCamera();
 }
+
+
+/// <summary>
+/// configure the camera the way that we expect it
+/// </summary>
+void LibCameraFrameGrabber::configureCamera()
+{
+   // grab the default configuration for raw frame capture
+   cameraConfiguration = camera->generateConfiguration({ libcamera::StreamRole::Raw });
+   if (cameraConfiguration->size() != 1)
+      throw std::runtime_error("LibCameraFrameGrabber::configureCamera: expected single stream configuration");
+   auto &config = cameraConfiguration->at(0);
+
+   // set our desired image size; the RPi camera has its best frame rate at this
+   // resolution, 90 FPS for v1 camera, >200 for some of the newer ones
+   config.size.width = 640;
+   config.size.height = 480;
+   config.bufferCount = 10;
+   cameraConfiguration->validate();
+   std::cout << cameraConfiguration->at(0).toString() << std::endl;
+
+   if (0 != camera->configure(cameraConfiguration.get()))
+      throw std::runtime_error("LibCameraFrameGrabber::configureCamera: configure failed");
+}
+
+
+/// <summary>
+/// begin capturing images
+/// </summary>
+void LibCameraFrameGrabber::startCapturing()
+{
+   libcamera::Stream *stream = cameraConfiguration->at(0).stream();
+
+   // create our buffer allocator
+   frameBufferAllocator.reset(new libcamera::FrameBufferAllocator(camera));
+
+   int buffersAllocated = frameBufferAllocator->allocate(stream);
+   if (buffersAllocated <= 0)
+      throw std::runtime_error("LibCameraFrameGrabber::startCapturing: allocate failed");
+   std::cout << "Allocated " << buffersAllocated << " buffers" << std::endl;
+
+   for (int i=0; i<buffersAllocated; ++i)
+   {
+      std::unique_ptr<libcamera::Request> request = camera->createRequest();
+      if (!request)
+         throw std::runtime_error("LibCameraFrameGrabber::startCapturing: createRequest failed");
+      if (0 != request->addBuffer(stream, frameBufferAllocator->buffers(stream)[i].get()))
+         throw std::runtime_error("LibCameraFrameGrabber::startCapturing: addBuffer failed");
+      requests.push_back(std::move(request));
+   }
+}
+
+

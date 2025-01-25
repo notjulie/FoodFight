@@ -16,7 +16,7 @@ public:
 	virtual ~FrameGrabber() {}
 
 	virtual void SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback) {}
-	virtual void StartCapturing() {}
+	virtual void startCapturing() {}
 };
 
 

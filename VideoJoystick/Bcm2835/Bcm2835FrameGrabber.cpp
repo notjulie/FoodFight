@@ -51,7 +51,7 @@ void Bcm2835FrameGrabber::SetupFrameCallback(const std::function<void(const std:
      throw std::runtime_error("Failed to setup camera output");
 }
 
-void Bcm2835FrameGrabber::StartCapturing(void)
+void Bcm2835FrameGrabber::startCapturing()
 {
 	bCapturing = 1;
 

@@ -38,7 +38,7 @@ public:
 	virtual ~Bcm2835FrameGrabber();
 
 	void SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback) override;
-	void StartCapturing() override;
+	void startCapturing() override;
 
 private:
 	void CreateCameraComponent();

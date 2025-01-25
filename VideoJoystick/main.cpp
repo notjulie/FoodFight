@@ -108,7 +108,7 @@ int main(int argc, const char **argv)
       });
 
       // start grabbing frames
-      frameGrabber->StartCapturing();
+      frameGrabber->startCapturing();
 
       // watch for signal to exit
       while (!signalStatus)
