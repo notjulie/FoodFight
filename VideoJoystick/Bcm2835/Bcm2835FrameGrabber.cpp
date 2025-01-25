@@ -25,6 +25,9 @@ Bcm2835FrameGrabber::Bcm2835FrameGrabber()
 	// Set up the camera_parameters to default
 	memset(&this->camera_parameters, 0, sizeof(this->camera_parameters));
 	raspicamcontrol_set_defaults(&this->camera_parameters);
+
+	// create
+	CreateCameraComponent();
 }
 
 

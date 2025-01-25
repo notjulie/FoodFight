@@ -110,8 +110,7 @@ int main(int argc, const char **argv)
 	// Now set up our components
    try
    {
-      std::unique_ptr<FrameGrabber> frameGrabber(new LibCameraFrameGrabber());
-      frameGrabber->CreateCameraComponent();
+      std::unique_ptr<FrameGrabber> frameGrabber(LibCameraFrameGrabber::createUniqueCamera());
 
       // Enable the camera video port and tell it its callback function
       frameGrabber->SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame)

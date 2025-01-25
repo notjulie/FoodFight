@@ -13,11 +13,17 @@
 class LibCameraFrameGrabber : public FrameGrabber
 {
 public:
-   LibCameraFrameGrabber();
    virtual ~LibCameraFrameGrabber();
+
+   static LibCameraFrameGrabber *createUniqueCamera();
+
+private:
+   LibCameraFrameGrabber();
+   void openUniqueCamera();
 
 private:
    std::shared_ptr<libcamera::CameraManager> cameraManager;
+   std::shared_ptr<libcamera::Camera> camera;
 };
 
 #endif // LIBCAMERA_FRAMEGRABBER_H
