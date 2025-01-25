@@ -1,24 +1,8 @@
-
-/**
- * \file RaspiVidYUV.c
- * Command line program to capture a camera video stream and save file
- * as uncompressed YUV420 data
- * Also optionally display a preview/viewfinder of current camera input.
- *
- * \date 7th Jan 2014
- * \Author: James Hughes
- *
- * Description
- *
- * 2 components are created; camera and preview.
- * Camera component has three ports, preview, video and stills.
- * Preview is connected using standard mmal connections, the video output
- * is written straight to the file in YUV 420 format via the requisite buffer
- * callback. Still port is not used
- *
- * We use the RaspiCamControl code to handle the specific camera settings.
- * We use the RaspiPreview code to handle the generic preview
- */
+//
+// Author: Randy Rasmussen
+// Copyright: none, use as you will
+// Warantee: none, your own risk
+//
 
 // We use some GNU extensions (basename)
 #ifndef _GNU_SOURCE
@@ -40,10 +24,10 @@
 #include <iostream>
 #include <stdexcept>
 
+#include "LibCamera/LibCameraFrameGrabber.h"
 
 // project includes
 #include "CommandProcessor.h"
-#include "FrameGrabber.h"
 #include "FrameHandler.h"
 #include "SocketListener.h"
 #include "SPIDAC.h"
@@ -127,24 +111,24 @@ int main(int argc, const char **argv)
 	// Now set up our components
    try
    {
-        FrameGrabber frameGrabber;
-        frameGrabber.CreateCameraComponent();
+      std::unique_ptr<FrameGrabber> frameGrabber(new LibCameraFrameGrabber());
+      frameGrabber->CreateCameraComponent();
 
-        // Enable the camera video port and tell it its callback function
-        frameGrabber.SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame)
-        {
-            // process it
-            frameHandler.HandleFrame(frame);
-        });
+      // Enable the camera video port and tell it its callback function
+      frameGrabber->SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame)
+      {
+          // process it
+          frameHandler.HandleFrame(frame);
+      });
 
-        // start grabbing frames
-        frameGrabber.StartCapturing();
+      // start grabbing frames
+      frameGrabber->StartCapturing();
 
-        // watch for signal to exit
-        while (!terminateRequested)
-        {
-            std::this_thread::sleep_for(std::chrono::milliseconds(100));
-        }
+      // watch for signal to exit
+      while (!terminateRequested)
+      {
+          std::this_thread::sleep_for(std::chrono::milliseconds(100));
+      }
    }
    catch (std::exception &e)
    {

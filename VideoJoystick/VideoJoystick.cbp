@@ -38,9 +38,11 @@
 			<Add directory="../dependencies/userland/interface/mmal" />
 			<Add directory="../dependencies/userland/interface/vcos" />
 			<Add directory="../dependencies/userland/interface/vchiq_arm" />
+			<Add directory="." />
 		</Compiler>
 		<Linker>
 			<Add library="bcm2835" />
+			<Add library="camera" />
 		</Linker>
 		<Unit filename="../dependencies/userland/host_applications/linux/apps/raspicam/RaspiCLI.c">
 			<Option compilerVar="CC" />
@@ -156,9 +158,15 @@
 		<Unit filename="../dependencies/userland/interface/vmcs_host/vc_vchi_tvservice.c">
 			<Option compilerVar="CC" />
 		</Unit>
+		<Unit filename="Bcm2835/Bcm2835.h" />
+		<Unit filename="Bcm2835/Bcm2835FrameGrabber.cpp" />
+		<Unit filename="Bcm2835/LibBcm2835.cpp" />
 		<Unit filename="CommandProcessor.cpp" />
-		<Unit filename="FrameGrabber.cpp" />
 		<Unit filename="FrameHandler.cpp" />
+		<Unit filename="LibCamera/LibCameraFrameGrabber.cpp" />
+		<Unit filename="LibCamera/LibCameraFrameGrabber.h" />
+		<Unit filename="LibCamera/LibCameraManager.cpp" />
+		<Unit filename="LibCamera/LibCameraManager.h" />
 		<Unit filename="SPIDAC.cpp" />
 		<Unit filename="SocketListener.cpp" />
 		<Unit filename="VideoFrame.cpp" />
