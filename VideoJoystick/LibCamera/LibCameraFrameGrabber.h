@@ -17,7 +17,7 @@ public:
    virtual ~LibCameraFrameGrabber();
 
 private:
-   std::shared_ptr<LibCameraManager> cameraManager;
+   std::shared_ptr<libcamera::CameraManager> cameraManager;
 };
 
 #endif // LIBCAMERA_FRAMEGRABBER_H

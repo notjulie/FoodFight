@@ -13,19 +13,15 @@
 /// <summary>
 /// libcmaera lifetime support; get a shared instance to assure that
 /// the library is initialized, library will deinitialize when all
-/// shared instances go out of scope
+/// shared instances go out of scope, i.e. at application shutdown
 /// </summary>
 class LibCameraManager final {
 public:
-   ~LibCameraManager();
-
-   static std::shared_ptr<LibCameraManager> Initialize();
+   static std::shared_ptr<libcamera::CameraManager> Initialize();
 
 private:
-   LibCameraManager();
-
-private:
-   libcamera::CameraManager cameraManager;
+   LibCameraManager() = delete;
+   ~LibCameraManager() = delete;
 };
 
 

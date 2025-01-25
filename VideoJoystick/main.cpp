@@ -59,9 +59,8 @@ static void signal_handler(int signal_number)
 	{
 		// Going to abort on all other signals
 		std::cerr << "Aborting program" << std::endl;
-		exit(130);
+		terminateRequested = true;
 	}
-
 }
 
 

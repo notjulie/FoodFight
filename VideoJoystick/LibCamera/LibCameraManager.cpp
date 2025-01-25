@@ -5,47 +5,29 @@
 //
 
 #include <mutex>
-#include <stdexcept>
 #include "LibCameraManager.h"
 
 
 /// <summary>
-/// Initializes the libcamera library
+/// Initializes the library and returns a shared pointer to it; the
+/// documenation generally implies that it should remain for the
+/// duration of the app.  We keep a shared pointer to it, so the object
+/// won't be deleted until our global instance is closed at app shutdown
 /// </summary>
-LibCameraManager::LibCameraManager()
+std::shared_ptr<libcamera::CameraManager> LibCameraManager::Initialize()
 {
-   // start the camera manager
-   cameraManager.start();
-   for (auto const &camera : cameraManager.cameras())
-      std::cout << camera->id() << std::endl;
-}
+   static std::shared_ptr<libcamera::CameraManager> cameraManager;
 
+   static std::once_flag once;
+   std::call_once(once, [](){
+      cameraManager.reset(new libcamera::CameraManager());
+      cameraManager->start();
+      for (auto const &camera : cameraManager->cameras())
+         std::cout << camera->id() << std::endl;
+   });
 
-/// <summary>
-/// Deinitializes the libcamera library
-/// </summary>
-LibCameraManager::~LibCameraManager()
-{
-}
-
-
-/// <summary>
-/// Initializes the library and returns a shared pointer to it
-/// </summary>
-std::shared_ptr<LibCameraManager> LibCameraManager::Initialize()
-{
+   return cameraManager;
    static std::mutex initMutex;
-   static std::weak_ptr<LibCameraManager> globalInstance;
-
-   std::lock_guard<std::mutex> lock(initMutex);
-   std::shared_ptr<LibCameraManager> result = globalInstance.lock();
-   if (!result)
-   {
-      result.reset(new LibCameraManager());
-      globalInstance = result;
-   }
-
-   return result;
 }
 
 
