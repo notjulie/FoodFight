@@ -37,6 +37,7 @@
 #include <netinet/in.h>
 #include <arpa/inet.h>
 
+#include <iostream>
 #include <stdexcept>
 
 #define VERSION_STRING "v1.3.15"
@@ -68,31 +69,14 @@ extern "C" {
 #include "SPIDAC.h"
 
 
-/// Interval at which we check for an failure abort during capture
-const int ABORT_INTERVAL = 100; // ms
-
 
 extern "C" {
-	int mmal_status_to_int(MMAL_STATUS_T status);
 	static void signal_handler(int signal_number);
 };
 
 
 static bool terminateRequested = false;
 
-
-
-/**
- * Checks if specified port is valid and enabled, then disables it
- *
- * @param port  Pointer the port
- *
- */
-static void check_disable_port(MMAL_PORT_T *port)
-{
-	if (port && port->is_enabled)
-		mmal_port_disable(port);
-}
 
 /**
  * Handler for sigint signals
@@ -110,7 +94,7 @@ static void signal_handler(int signal_number)
 	else
 	{
 		// Going to abort on all other signals
-		vcos_log_error("Aborting program\n");
+		std::cerr << "Aborting program" << std::endl;
 		exit(130);
 	}
 
@@ -166,17 +150,10 @@ int main(int argc, const char **argv)
 #endif
 
 	// Our main objects..
-	FrameGrabber frameGrabber;
 	FrameHandler frameHandler;
-	int exit_code = EX_OK;
 
 	// command handlers supported by camera functions
 	commander.AddHandler("getImage", [&](std::string){ return frameHandler.GetImageAsString(); });
-
-	MMAL_STATUS_T status = MMAL_SUCCESS;
-
-	// Register our application with the logging system
-	vcos_log_register("RaspiVid", VCOS_LOG_CATEGORY);
 
 	signal(SIGINT, signal_handler);
 
@@ -185,75 +162,34 @@ int main(int argc, const char **argv)
 
 
 	// Now set up our components
-	if ((status = frameGrabber.CreateCameraComponent()) != MMAL_SUCCESS)
-	{
-		vcos_log_error("%s: Failed to create camera component", __func__);
-		exit_code = EX_SOFTWARE;
-	}
-	else
-	{
-		status = MMAL_SUCCESS;
+   try
+   {
+        FrameGrabber frameGrabber;
+        frameGrabber.CreateCameraComponent();
 
-		if (status == MMAL_SUCCESS)
-		{
-			// Enable the camera video port and tell it its callback function
-			status = frameGrabber.SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame) {
-				// process it
-				frameHandler.HandleFrame(frame);
-			});
+        // Enable the camera video port and tell it its callback function
+        frameGrabber.SetupFrameCallback([&](const std::shared_ptr<VideoFrame> &frame)
+        {
+            // process it
+            frameHandler.HandleFrame(frame);
+        });
 
-			if (status != MMAL_SUCCESS)
-			{
-				vcos_log_error("Failed to setup camera output");
-				goto error;
-			}
+        // start grabbing frames
+        frameGrabber.StartCapturing();
 
-			// Send all the buffers to the camera video port
-			{
-				int num = mmal_queue_length(frameGrabber.camera_pool->queue);
-				int q;
-				for (q=0;q<num;q++)
-				{
-					MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(frameGrabber.camera_pool->queue);
+        // watch for signal to exit
+        while (!terminateRequested)
+        {
+            std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        }
+   }
+   catch (std::exception &e)
+   {
+      std::cerr << e.what() << std::endl;
+   }
 
-					if (!buffer)
-						vcos_log_error("Unable to get a required buffer %d from pool queue", q);
-
-					if (mmal_port_send_buffer(frameGrabber.GetVideoPort(), buffer)!= MMAL_SUCCESS)
-						vcos_log_error("Unable to send a buffer to camera video port (%d)", q);
-				}
-			}
-
-			// start grabbing frames
-			frameGrabber.StartCapturing();
-
-			// watch for signal to exit
-			while (!terminateRequested)
-			{
-				vcos_sleep(ABORT_INTERVAL);
-			}
-		}
-		else
-		{
-			mmal_status_to_int(status);
-			vcos_log_error("%s: Failed to connect camera to preview", __func__);
-		}
-
-		error:
-
-		mmal_status_to_int(status);
-
-		// Disable all our ports that are not handled by connections
-		check_disable_port(frameGrabber.GetVideoPort());
-		frameGrabber.DisableCamera();
-
-		frameGrabber.DestroyCameraComponent();
-	}
-
-	if (status != MMAL_SUCCESS)
-		raspicamcontrol_check_configuration(128);
 
 	bcm2835_close();
-	return exit_code;
+	return 0;
 }
 

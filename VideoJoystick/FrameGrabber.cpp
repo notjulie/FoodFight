@@ -11,24 +11,56 @@
 
 
 static void camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+static void check_disable_port(MMAL_PORT_T *port);
 
-FrameGrabber::FrameGrabber(void)
+
+/// <summary>
+/// Initializes a new instance of class FrameGrabber
+/// </summary>
+FrameGrabber::FrameGrabber()
 {
 	// Set up the camera_parameters to default
 	memset(&this->camera_parameters, 0, sizeof(this->camera_parameters));
 	raspicamcontrol_set_defaults(&this->camera_parameters);
 }
 
-MMAL_STATUS_T FrameGrabber::SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback)
+
+/// <summary>
+/// Releases resources held by the object
+/// </summary>
+FrameGrabber::~FrameGrabber()
+{
+   check_disable_port(GetVideoPort());
+	DisableCamera();
+	DestroyCameraComponent();
+}
+
+void FrameGrabber::SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback)
 {
 	this->frameCallback = callback;
 	GetVideoPort()->userdata = (struct MMAL_PORT_USERDATA_T *)this;
-    return mmal_port_enable(GetVideoPort(), CameraBufferCallbackEntry);
+   MMAL_STATUS_T status = mmal_port_enable(GetVideoPort(), CameraBufferCallbackEntry);
+
+   if (status != MMAL_SUCCESS)
+     throw std::runtime_error("Failed to setup camera output");
 }
 
 void FrameGrabber::StartCapturing(void)
 {
 	bCapturing = 1;
+
+    int num = mmal_queue_length(camera_pool->queue);
+    int q;
+    for (q=0; q<num; q++)
+    {
+        MMAL_BUFFER_HEADER_T *buffer = mmal_queue_get(camera_pool->queue);
+
+        if (!buffer)
+            vcos_log_error("Unable to get a required buffer %d from pool queue", q);
+
+        if (mmal_port_send_buffer(GetVideoPort(), buffer)!= MMAL_SUCCESS)
+            vcos_log_error("Unable to send a buffer to camera video port (%d)", q);
+    }
 
 	if (mmal_port_parameter_set_boolean(GetVideoPort(), MMAL_PARAMETER_CAPTURE, bCapturing) != MMAL_SUCCESS)
 	{
@@ -85,10 +117,8 @@ void FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T 
  *
  * @param state Pointer to state control struct
  *
- * @return MMAL_SUCCESS if all OK, something else otherwise
- *
  */
-MMAL_STATUS_T FrameGrabber::CreateCameraComponent(void)
+void FrameGrabber::CreateCameraComponent()
 {
    MMAL_COMPONENT_T *camera = 0;
    MMAL_STATUS_T status;
@@ -113,12 +143,10 @@ MMAL_STATUS_T FrameGrabber::CreateCameraComponent(void)
 
     if (!camera->output_num)
     {
-       status = MMAL_ENOSYS;
        throw std::runtime_error("Camera doesn't have output ports");
     }
 
     status = mmal_port_parameter_set_uint32(camera->control, MMAL_PARAMETER_CAMERA_CUSTOM_SENSOR_CONFIG, sensor_mode);
-
     if (status != MMAL_SUCCESS)
        throw std::runtime_error("Could not set sensor mode");
 
@@ -140,7 +168,6 @@ MMAL_STATUS_T FrameGrabber::CreateCameraComponent(void)
 
     // Enable the camera, and tell it its control callback function
     status = mmal_port_enable(camera->control, camera_control_callback);
-
     if (status != MMAL_SUCCESS)
        throw std::runtime_error("Unable to enable control port");
 
@@ -204,7 +231,6 @@ MMAL_STATUS_T FrameGrabber::CreateCameraComponent(void)
     format->es->video.frame_rate.den = VIDEO_FRAME_RATE_DEN;
 
     status = mmal_port_format_commit(video_port);
-
     if (status != MMAL_SUCCESS)
        throw std::runtime_error("camera video format couldn't be set");
 
@@ -259,22 +285,14 @@ MMAL_STATUS_T FrameGrabber::CreateCameraComponent(void)
 
     camera_pool = pool;
     camera_component = camera;
-
-    return status;
-   }
-   catch (std::runtime_error &x)
-   {
-      vcos_log_error(x.what());
    }
    catch (...)
    {
-      vcos_log_error("Unknown exception in create_camera_component");
+      // clean up before exiting
+      if (camera)
+         mmal_component_destroy(camera);
+      throw;
    }
-
-   // clean up before exiting
-   if (camera)
-      mmal_component_destroy(camera);
-   return status;
 }
 
 /**
@@ -343,3 +361,15 @@ static void camera_control_callback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buf
 }
 
 
+
+/**
+ * Checks if specified port is valid and enabled, then disables it
+ *
+ * @param port  Pointer the port
+ *
+ */
+static void check_disable_port(MMAL_PORT_T *port)
+{
+	if (port && port->is_enabled)
+		mmal_port_disable(port);
+}

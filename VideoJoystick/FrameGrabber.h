@@ -32,26 +32,26 @@ extern "C" {
 class FrameGrabber
 {
 public:
-	FrameGrabber(void);
-	MMAL_STATUS_T CreateCameraComponent(void);
-	void DisableCamera(void);
-	void DestroyCameraComponent(void);
-	MMAL_STATUS_T SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback);
-	void StartCapturing(void);
+	FrameGrabber();
+	~FrameGrabber();
 
-	MMAL_PORT_T *GetVideoPort(void) { return camera_component->output[MMAL_CAMERA_VIDEO_PORT]; }
+	void CreateCameraComponent();
+	void SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback);
+	void StartCapturing();
 
 private:
 	void CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
+	void DisableCamera();
+	void DestroyCameraComponent();
+	MMAL_PORT_T *GetVideoPort() { return camera_component->output[MMAL_CAMERA_VIDEO_PORT]; }
 
 private:
 	static void CameraBufferCallbackEntry(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer);
 
-public:
-   MMAL_POOL_T *camera_pool = nullptr;            /// Pointer to the pool of buffers used by camera video port
-
 private:
    RASPICAM_CAMERA_PARAMETERS camera_parameters; /// Camera setup parameters
+
+   MMAL_POOL_T *camera_pool = nullptr;            /// Pointer to the pool of buffers used by camera video port
 
    int bCapturing = 0;                      /// State of capture/pause
 
