@@ -40,26 +40,6 @@
 #include <iostream>
 #include <stdexcept>
 
-#define VERSION_STRING "v1.3.15"
-
-#include <bcm2835.h>
-
-#include "bcm_host.h"
-#include "interface/vcos/vcos.h"
-
-#include "interface/mmal/mmal.h"
-#include "interface/mmal/mmal_logging.h"
-#include "interface/mmal/mmal_buffer.h"
-#include "interface/mmal/util/mmal_util.h"
-#include "interface/mmal/util/mmal_util_params.h"
-#include "interface/mmal/util/mmal_connection.h"
-
-extern "C" {
-	#include "RaspiCamControl.h"
-	#include "RaspiCLI.h"
-};
-
-#include <semaphore.h>
 
 // project includes
 #include "CommandProcessor.h"
@@ -106,23 +86,6 @@ static void signal_handler(int signal_number)
  */
 int main(int argc, const char **argv)
 {
-	// initialize access to the GPU
-	bcm_host_init();
-
-	// initialize the bcm2835 library
-	if (!bcm2835_init())
-	{
-		printf("Error initializing bcm2835 library\n");
-		return -1;
-	}
-
-	bcm2835_pwm_set_data(18, BCM2835_GPIO_FSEL_ALT5);
-
-	bcm2835_pwm_set_clock(1000);
-	bcm2835_pwm_set_mode(0,1,1);
-	bcm2835_pwm_set_range(0,1024);
-	bcm2835_pwm_set_data(0,300);
-
 	// create a command handler; we can add commands to it as we go along
 	CommandProcessor commander;
 
@@ -188,8 +151,6 @@ int main(int argc, const char **argv)
       std::cerr << e.what() << std::endl;
    }
 
-
-	bcm2835_close();
 	return 0;
 }
 

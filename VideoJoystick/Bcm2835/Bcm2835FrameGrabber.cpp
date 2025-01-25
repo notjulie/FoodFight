@@ -4,7 +4,7 @@
 #include "interface/mmal/util/mmal_default_components.h"
 #include "interface/mmal/util/mmal_util.h"
 #include "interface/mmal/util/mmal_util_params.h"
-#include "FrameGrabber.h"
+#include "Bcm2835FrameGrabber.h"
 
 /// Video render needs at least 2 buffers.
 #define VIDEO_OUTPUT_BUFFERS_NUM 3
@@ -15,10 +15,13 @@ static void check_disable_port(MMAL_PORT_T *port);
 
 
 /// <summary>
-/// Initializes a new instance of class FrameGrabber
+/// Initializes a new instance of class Bcm2835FrameGrabber
 /// </summary>
-FrameGrabber::FrameGrabber()
+Bcm2835FrameGrabber::Bcm2835FrameGrabber()
 {
+   // initialize the libbcm2835 library if it hasn't been
+   bcm2835 = LibBcm2835::Initialize();
+
 	// Set up the camera_parameters to default
 	memset(&this->camera_parameters, 0, sizeof(this->camera_parameters));
 	raspicamcontrol_set_defaults(&this->camera_parameters);
@@ -28,14 +31,14 @@ FrameGrabber::FrameGrabber()
 /// <summary>
 /// Releases resources held by the object
 /// </summary>
-FrameGrabber::~FrameGrabber()
+Bcm2835FrameGrabber::~Bcm2835FrameGrabber()
 {
    check_disable_port(GetVideoPort());
 	DisableCamera();
 	DestroyCameraComponent();
 }
 
-void FrameGrabber::SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback)
+void Bcm2835FrameGrabber::SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback)
 {
 	this->frameCallback = callback;
 	GetVideoPort()->userdata = (struct MMAL_PORT_USERDATA_T *)this;
@@ -45,7 +48,7 @@ void FrameGrabber::SetupFrameCallback(const std::function<void(const std::shared
      throw std::runtime_error("Failed to setup camera output");
 }
 
-void FrameGrabber::StartCapturing(void)
+void Bcm2835FrameGrabber::StartCapturing(void)
 {
 	bCapturing = 1;
 
@@ -73,9 +76,9 @@ void FrameGrabber::StartCapturing(void)
 /// <summary>
 /// Static camera callback that just dispatches to our non-static version
 /// </summary>
-void FrameGrabber::CameraBufferCallbackEntry(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
+void Bcm2835FrameGrabber::CameraBufferCallbackEntry(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
-   FrameGrabber *pThis = (FrameGrabber *)port->userdata;
+   Bcm2835FrameGrabber *pThis = (Bcm2835FrameGrabber *)port->userdata;
    if (pThis != nullptr)
 	   pThis->CameraBufferCallback(port, buffer);
 }
@@ -84,7 +87,7 @@ void FrameGrabber::CameraBufferCallbackEntry(MMAL_PORT_T *port, MMAL_BUFFER_HEAD
 /// <summary>
 /// Processes the camera buffer
 /// </summary>
-void FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
+void Bcm2835FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T *buffer)
 {
 	// create a VideoFrame from the buffer; this way the frame handler can do whatever
 	// it wants, including processing it later on a different thread if it so desires
@@ -118,7 +121,7 @@ void FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HEADER_T 
  * @param state Pointer to state control struct
  *
  */
-void FrameGrabber::CreateCameraComponent()
+void Bcm2835FrameGrabber::CreateCameraComponent()
 {
    MMAL_COMPONENT_T *camera = 0;
    MMAL_STATUS_T status;
@@ -301,7 +304,7 @@ void FrameGrabber::CreateCameraComponent()
  * @param state Pointer to state control struct
  *
  */
-void FrameGrabber::DestroyCameraComponent(void)
+void Bcm2835FrameGrabber::DestroyCameraComponent(void)
 {
    if (camera_component)
    {
@@ -310,7 +313,7 @@ void FrameGrabber::DestroyCameraComponent(void)
    }
 }
 
-void FrameGrabber::DisableCamera(void)
+void Bcm2835FrameGrabber::DisableCamera(void)
 {
     if (camera_component)
        mmal_component_disable(camera_component);
