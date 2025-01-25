@@ -27,7 +27,6 @@ std::shared_ptr<libcamera::CameraManager> LibCameraManager::Initialize()
    });
 
    return cameraManager;
-   static std::mutex initMutex;
 }
 
 #include <unistd.h>
