@@ -22,12 +22,6 @@ LibCameraFrameGrabber::LibCameraFrameGrabber()
 /// </summary>
 LibCameraFrameGrabber::~LibCameraFrameGrabber()
 {
-   // shut down our frame processing
-   {
-      std::lock_guard<std::mutex> lock(processFramesMutex);
-      processFramesEnabled = false;
-   }
-
    // this is the official shutdown procedure
    if (camera)
    {
@@ -145,8 +139,9 @@ void LibCameraFrameGrabber::startCapturing()
 /// </summary>
 void LibCameraFrameGrabber::onRequestCompleted(libcamera::Request *request)
 {
-   std::lock_guard<std::mutex> lock(processFramesMutex);
-   if (!processFramesEnabled)
+   // if the frame was canceled it almost certainly means that we are shutting
+   // down so we should proceed to the nearest exit
+   if (request->status() == libcamera::Request::RequestCancelled)
       return;
 
    ++frameCount;

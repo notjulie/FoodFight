@@ -38,9 +38,6 @@ private:
    std::vector<std::unique_ptr<libcamera::Request>> requests;
    std::chrono::steady_clock::time_point frameCountReference;
    int frameCount = 0;
-
-   std::mutex processFramesMutex;
-   bool processFramesEnabled = true;
 };
 
 #endif // LIBCAMERA_FRAMEGRABBER_H
