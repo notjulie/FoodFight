@@ -22,9 +22,25 @@ LibCameraFrameGrabber::LibCameraFrameGrabber()
 /// </summary>
 LibCameraFrameGrabber::~LibCameraFrameGrabber()
 {
-   // make sure to stop acquiring images first
+   // shut down our frame processing
+   {
+      std::lock_guard<std::mutex> lock(processFramesMutex);
+      processFramesEnabled = false;
+   }
+
+   // this is the official shutdown procedure
    if (camera)
+   {
       camera->stop();
+      if (frameBufferAllocator)
+      {
+         frameBufferAllocator->free(cameraConfiguration->at(0).stream());
+         frameBufferAllocator.reset();
+      }
+      camera->release();
+      camera.reset();
+   }
+   cameraManager.reset();
 }
 
 
@@ -105,7 +121,9 @@ void LibCameraFrameGrabber::startCapturing()
       throw std::runtime_error("LibCameraFrameGrabber::startCapturing: allocate failed");
    std::cout << "Allocated " << buffersAllocated << " buffers" << std::endl;
 
-   if (0 != camera->start())
+   libcamera::ControlList controls;
+   controls.set(libcamera::controls::FrameDurationLimits, libcamera::Span<const std::int64_t, 2>({11000, 11112}));
+   if (0 != camera->start(&controls))
       throw std::runtime_error("LibCameraFrameGrabber::startCapturing: start failed");
 
    for (int i=0; i<buffersAllocated; ++i)
@@ -127,9 +145,18 @@ void LibCameraFrameGrabber::startCapturing()
 /// </summary>
 void LibCameraFrameGrabber::onRequestCompleted(libcamera::Request *request)
 {
+   std::lock_guard<std::mutex> lock(processFramesMutex);
+   if (!processFramesEnabled)
+      return;
+
    ++frameCount;
-   if ((frameCount % 60) == 0)
+   auto now = std::chrono::steady_clock::now();
+   if (now - frameCountReference >= std::chrono::milliseconds(1000))
+   {
       std::cout << frameCount << std::endl;
+      frameCount = 0;
+      frameCountReference = now;
+   }
 
    request->reuse(libcamera::Request::ReuseBuffers);
    if (0 != camera->queueRequest(request))
