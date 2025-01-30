@@ -44,6 +44,7 @@
 			<Add library="bcm2835" />
 			<Add library="camera" />
 			<Add library="camera-base" />
+			<Add library="wiringPi" />
 		</Linker>
 		<Unit filename="../dependencies/userland/host_applications/linux/apps/raspicam/RaspiCLI.c">
 			<Option compilerVar="CC" />
@@ -164,6 +165,8 @@
 		<Unit filename="Bcm2835/LibBcm2835.cpp" />
 		<Unit filename="CommandProcessor.cpp" />
 		<Unit filename="FrameHandler.cpp" />
+		<Unit filename="LedPwm.cpp" />
+		<Unit filename="LedPwm.h" />
 		<Unit filename="LibCamera/LibCameraFrameGrabber.cpp" />
 		<Unit filename="LibCamera/LibCameraFrameGrabber.h" />
 		<Unit filename="LibCamera/LibCameraManager.cpp" />
