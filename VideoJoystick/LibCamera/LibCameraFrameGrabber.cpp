@@ -180,7 +180,7 @@ void LibCameraFrameGrabber::onRequestCompleted(libcamera::Request *request)
 
       // if we have a request waiting to be processed we want to requeue it
       // before we replace it with the new request
-      if (requestToProcess != nullptr)
+      if (requestToProcess != nullptr && !terminated)
       {
          requestToProcess->reuse(libcamera::Request::ReuseBuffers);
          if (0 != camera->queueRequest(requestToProcess))
