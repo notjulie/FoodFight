@@ -25,8 +25,14 @@ LibCameraFrameGrabber::LibCameraFrameGrabber()
 /// </summary>
 LibCameraFrameGrabber::~LibCameraFrameGrabber()
 {
+   // signal the frame processing thread to terminate
+   {
+      std::lock_guard<std::mutex> lock(frameToProcessMutex);
+      terminated = true;
+      frameToProcessCondition.notify_all();
+   }
+
    // shut down our frame processing thread
-   terminated = true;
    if (frameProcessingThread != nullptr)
    {
       frameProcessingThread->join();
@@ -34,7 +40,7 @@ LibCameraFrameGrabber::~LibCameraFrameGrabber()
       frameProcessingThread = nullptr;
    }
 
-   // this is the official shutdown procedure
+   // this is the official camera shutdown procedure
    if (camera)
    {
       camera->stop();
