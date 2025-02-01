@@ -8,7 +8,9 @@
 #define LIBCAMERA_FRAMEGRABBER_H
 
 #include <chrono>
+#include <condition_variable>
 #include <mutex>
+#include <thread>
 #include "FrameGrabber.h"
 #include "LibCameraManager.h"
 
@@ -27,10 +29,14 @@ private:
    void onRequestCompleted(libcamera::Request *request);
    void openUniqueCamera();
 
+   void processFrames();
+
 private:
    static void requestCompletedCallback(libcamera::Request *request) { ((LibCameraFrameGrabber*)request->cookie())->onRequestCompleted(request); }
 
 private:
+   bool terminated = false;
+
    std::shared_ptr<libcamera::CameraManager> cameraManager;
    std::shared_ptr<libcamera::Camera> camera;
    std::unique_ptr<libcamera::CameraConfiguration> cameraConfiguration;
@@ -38,6 +44,12 @@ private:
    std::vector<std::unique_ptr<libcamera::Request>> requests;
    std::chrono::steady_clock::time_point frameCountReference;
    int frameCount = 0;
+   int framesProcessed = 0;
+
+   std::thread *frameProcessingThread = nullptr;
+   libcamera::Request *requestToProcess = nullptr;
+   std::condition_variable frameToProcessCondition;
+   std::mutex frameToProcessMutex;
 };
 
 #endif // LIBCAMERA_FRAMEGRABBER_H

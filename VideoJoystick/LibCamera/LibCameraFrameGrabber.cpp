@@ -14,6 +14,9 @@ LibCameraFrameGrabber::LibCameraFrameGrabber()
 {
    // initialize libcamera
    cameraManager = LibCameraManager::Initialize();
+
+   // create our frame processing thread
+   frameProcessingThread = new std::thread([this](){ processFrames(); });
 }
 
 
@@ -22,6 +25,15 @@ LibCameraFrameGrabber::LibCameraFrameGrabber()
 /// </summary>
 LibCameraFrameGrabber::~LibCameraFrameGrabber()
 {
+   // shut down our frame processing thread
+   terminated = true;
+   if (frameProcessingThread != nullptr)
+   {
+      frameProcessingThread->join();
+      delete frameProcessingThread;
+      frameProcessingThread = nullptr;
+   }
+
    // this is the official shutdown procedure
    if (camera)
    {
@@ -144,17 +156,69 @@ void LibCameraFrameGrabber::onRequestCompleted(libcamera::Request *request)
    if (request->status() == libcamera::Request::RequestCancelled)
       return;
 
+   // some reassuring diagnostics for now
    ++frameCount;
    auto now = std::chrono::steady_clock::now();
    if (now - frameCountReference >= std::chrono::milliseconds(1000))
    {
-      std::cout << frameCount << std::endl;
+      std::cout << frameCount << "," << framesProcessed << std::endl;
       frameCount = 0;
+      framesProcessed = 0;
       frameCountReference = now;
    }
 
-   request->reuse(libcamera::Request::ReuseBuffers);
-   if (0 != camera->queueRequest(request))
-      throw std::runtime_error("LibCameraFrameGrabber::onRequestCompleted: queueRequest failed");
+   // pass it off to the thread that processes requests
+   {
+      // lock
+      std::lock_guard<std::mutex> lock(frameToProcessMutex);
+
+      // if we have a request waiting to be processed we want to requeue it
+      // before we replace it with the new request
+      if (requestToProcess != nullptr)
+      {
+         requestToProcess->reuse(libcamera::Request::ReuseBuffers);
+         if (0 != camera->queueRequest(requestToProcess))
+            throw std::runtime_error("LibCameraFrameGrabber::onRequestCompleted: queueRequest failed");
+         requestToProcess = nullptr;
+      }
+
+      // post the request to be processed
+      requestToProcess = request;
+
+      // trigger the condition
+      frameToProcessCondition.notify_all();
+   }
 }
 
+
+/// <summary>
+/// Thread that processes frames
+/// </summary>
+void LibCameraFrameGrabber::processFrames()
+{
+   while (!terminated)
+   {
+      // wait for a frame to show up
+      libcamera::Request *request = nullptr;
+      {
+         std::unique_lock<std::mutex> lock(frameToProcessMutex);
+         frameToProcessCondition.wait(lock, [this](){ return terminated || requestToProcess != nullptr; });
+         request = requestToProcess;
+         requestToProcess = nullptr;
+      }
+
+      // process if we got one
+      if (request != nullptr && !terminated)
+      {
+         ++framesProcessed;
+
+         // dawdle to simulate that we are working really hard
+         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+         // requeue
+         request->reuse(libcamera::Request::ReuseBuffers);
+         if (0 != camera->queueRequest(request))
+            throw std::runtime_error("LibCameraFrameGrabber::processFrames: queueRequest failed");
+      }
+   }
+}
