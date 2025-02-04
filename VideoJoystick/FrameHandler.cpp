@@ -26,8 +26,8 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 	double xSum = 0;
 	double ySum = 0;
 	double rSum = 0;
-	const uint8_t *p = frame->GetPixelData();
-	auto pixelDataLength = frame->GetPixelDataLength();
+	const uint8_t *p = frame->getPixelData();
+	auto pixelDataLength = frame->getPixelDataLength();
 	for (int i=0; i<pixelDataLength; i+=3)
 	{
 		int r = p[0];
@@ -57,7 +57,7 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 		std::lock_guard<std::mutex> lock(frameRequestMutex);
 		while (!frameRequestQueue.empty())
 		{
-			frameRequestQueue.front().set_value(frame->ToString());
+			frameRequestQueue.front().set_value(frame->toString());
 			frameRequestQueue.pop_front();
 		}
 	}

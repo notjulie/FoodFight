@@ -13,6 +13,7 @@
 #include <thread>
 #include "FrameGrabber.h"
 #include "LibCameraManager.h"
+#include "VideoFrame.h"
 
 class LibCameraFrameGrabber : public FrameGrabber
 {
@@ -21,6 +22,7 @@ public:
    static LibCameraFrameGrabber *createUniqueCamera();
 
 	void startCapturing() override;
+	void SetupFrameCallback(const std::function<void(const std::shared_ptr<VideoFrame> &)> &callback) override { videoFrameCallback = callback; }
 
 private:
    LibCameraFrameGrabber();
@@ -36,12 +38,14 @@ private:
 
 private:
    bool terminated = false;
+   std::function<void(const std::shared_ptr<VideoFrame> &)> videoFrameCallback;
 
    std::shared_ptr<libcamera::CameraManager> cameraManager;
    std::shared_ptr<libcamera::Camera> camera;
    std::unique_ptr<libcamera::CameraConfiguration> cameraConfiguration;
    std::unique_ptr<libcamera::FrameBufferAllocator> frameBufferAllocator;
    std::vector<std::unique_ptr<libcamera::Request>> requests;
+   std::vector<std::shared_ptr<VideoFrame>> frames;
    std::chrono::steady_clock::time_point frameCountReference;
    int frameCount = 0;
    int framesProcessed = 0;

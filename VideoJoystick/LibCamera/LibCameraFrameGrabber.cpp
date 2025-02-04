@@ -107,11 +107,15 @@ void LibCameraFrameGrabber::configureCamera()
    config.size.width = 640;
    config.size.height = 480;
    config.bufferCount = 10;
+   config.pixelFormat = libcamera::formats::RGB888;
+   std::cout << cameraConfiguration->at(0).pixelFormat.toString() << std::endl;
    cameraConfiguration->validate();
    std::cout << cameraConfiguration->at(0).toString() << std::endl;
 
    if (0 != camera->configure(cameraConfiguration.get()))
       throw std::runtime_error("LibCameraFrameGrabber::configureCamera: configure failed");
+
+   std::cout << cameraConfiguration->at(0).pixelFormat.toString() << std::endl;
 }
 
 
@@ -140,10 +144,20 @@ void LibCameraFrameGrabber::startCapturing()
 
    for (int i=0; i<buffersAllocated; ++i)
    {
+      // get the frame buffer and set its index for future reference
+      auto &frameBuffer = frameBufferAllocator->buffers(stream)[i];
+      frameBuffer->setCookie(i);
+
+      // create a VideoFrame to associate with it
+      std::shared_ptr<VideoFrame> frame;
+      frame.reset(new MmapVideoFrame(frameBuffer->planes()[0].fd.get(), frameBuffer->planes()[0].length));
+      frames.push_back(frame);
+
+      // create and enqueue the request
       std::unique_ptr<libcamera::Request> request = camera->createRequest((uint64_t)this);
       if (!request)
          throw std::runtime_error("LibCameraFrameGrabber::startCapturing: createRequest failed");
-      if (0 != request->addBuffer(stream, frameBufferAllocator->buffers(stream)[i].get()))
+      if (0 != request->addBuffer(stream, frameBuffer.get()))
          throw std::runtime_error("LibCameraFrameGrabber::startCapturing: addBuffer failed");
       if (0 != camera->queueRequest(request.get()))
          throw std::runtime_error("LibCameraFrameGrabber::startCapturing: queueRequest failed");
@@ -167,7 +181,9 @@ void LibCameraFrameGrabber::onRequestCompleted(libcamera::Request *request)
    auto now = std::chrono::steady_clock::now();
    if (now - frameCountReference >= std::chrono::milliseconds(1000))
    {
-      std::cout << frameCount << "," << framesProcessed << std::endl;
+      libcamera::FrameBuffer *frameBuffer = request->findBuffer(cameraConfiguration->at(0).stream());
+      int planeSize = frameBuffer->planes()[0].length;
+      std::cout << frameCount << "," << framesProcessed << "," << planeSize << std::endl;
       frameCount = 0;
       framesProcessed = 0;
       frameCountReference = now;
@@ -219,7 +235,12 @@ void LibCameraFrameGrabber::processFrames()
          ++framesProcessed;
 
          // dawdle to simulate that we are working really hard
-         std::this_thread::sleep_for(std::chrono::milliseconds(100));
+         if (videoFrameCallback)
+         {
+            libcamera::FrameBuffer *frameBuffer = request->findBuffer(cameraConfiguration->at(0).stream());
+            std::shared_ptr<VideoFrame> frame = frames[frameBuffer->cookie()];
+            videoFrameCallback(frame);
+         }
 
          // requeue
          request->reuse(libcamera::Request::ReuseBuffers);

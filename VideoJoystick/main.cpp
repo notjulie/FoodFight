@@ -97,7 +97,7 @@ int main(int argc, const char **argv)
    std::signal(SIGINT, signal_handler);
 
    // Now set up our components
-   LedPwm::getInstance()->setDutyCycle(0.5);
+   //LedPwm::getInstance()->setDutyCycle(0.5);
    try
    {
       std::unique_ptr<FrameGrabber> frameGrabber(LibCameraFrameGrabber::createUniqueCamera());

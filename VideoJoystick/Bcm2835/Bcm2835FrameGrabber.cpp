@@ -95,7 +95,10 @@ void Bcm2835FrameGrabber::CameraBufferCallback(MMAL_PORT_T *port, MMAL_BUFFER_HE
 	// create a VideoFrame from the buffer; this way the frame handler can do whatever
 	// it wants, including processing it later on a different thread if it so desires
 	std::shared_ptr<VideoFrame> frame;
-	frame.reset(new VideoFrame(buffer));
+	// lock the buffer, copy it, unlock
+	mmal_buffer_header_mem_lock(buffer);
+	frame.reset(new VectorVideoFrame(buffer->data, buffer->length));
+	mmal_buffer_header_mem_unlock(buffer);
 
 	// pass the buffer to the frame handler
 	frameCallback(frame);
