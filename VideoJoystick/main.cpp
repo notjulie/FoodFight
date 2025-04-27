@@ -95,6 +95,8 @@ int main(int argc, const char **argv)
    });
 
    std::signal(SIGINT, signal_handler);
+   std::signal(SIGTERM, signal_handler);
+   std::signal(SIGKILL, signal_handler);
 
    // Now set up our components
    LedPwm::getInstance()->setDutyCycle(0.5);
