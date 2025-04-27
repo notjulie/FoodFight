@@ -45,6 +45,7 @@
 			<Add library="camera" />
 			<Add library="camera-base" />
 			<Add library="wiringPi" />
+			<Add library="spidev-lib++" />
 		</Linker>
 		<Unit filename="../dependencies/userland/host_applications/linux/apps/raspicam/RaspiCLI.c">
 			<Option compilerVar="CC" />
