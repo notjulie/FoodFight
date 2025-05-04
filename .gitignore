@@ -13,3 +13,5 @@ VideoJoystick/Debug
 /JoystickMonitor/bin/Debug
 /JoystickMonitor/.vs/JoystickMonitor/v16
 /JoystickMonitor/obj/Debug
+
+.DS_Store
