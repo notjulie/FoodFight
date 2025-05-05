@@ -65,12 +65,12 @@ int main(int argc, const char **argv)
    SPIDAC spiDac;
    commander.AddHandler("setX", [&spiDac](std::string param)
    {
-      spiDac.sendX(atol(param.c_str()));
+      spiDac.sendX(atof(param.c_str()));
       return std::string();
    });
    commander.AddHandler("setY", [&spiDac](std::string param)
    {
-      spiDac.sendY(atol(param.c_str()));
+      spiDac.sendY(atof(param.c_str()));
       return std::string();
    });
 

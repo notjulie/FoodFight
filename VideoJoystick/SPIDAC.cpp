@@ -13,6 +13,21 @@
 #include "SPIDAC.h"
 
 
+// documentation break
+//
+// RPi 3B pinout:
+// 		https://pi4j.com/1.2/pins/model-3b-rev1.html
+//
+// origin of the SPI class:
+// 		https://github.com/milekium/spidev-lib/tree/master/src
+//
+
+// RPi 3B SPI device names; they use the same data & clock line
+// but different chip select lines
+constexpr char SPI_CHANNEL_0_PATH[] = "/dev/spidev0.0";
+constexpr char SPI_CHANNEL_1_PATH[] = "/dev/spidev0.1";
+
+
 /// <summary>
 /// Initializes a new instance of class SPIDAC
 /// </summary>
@@ -64,27 +79,49 @@ void SPIDAC::open()
 /// <summary>
 /// sends the given X value
 /// </summary>
-void SPIDAC::sendX(uint8_t x)
+void SPIDAC::sendX(float x)
 {
+   sendDacCommand(DacCommand::LoadAAndUpdate, x);
+}
+
+
+/// <summary>
+/// sends the given Y value
+/// </summary>
+void SPIDAC::sendY(float y)
+{
+   sendDacCommand(DacCommand::LoadBAndUpdate, y);
+}
+
+
+void SPIDAC::sendDacCommand(DacCommand command, float dacValue)
+{
+   // open if we haven't already
    open();
 
-   uint8_t data[] = {0x55};
+   // convert the dacValue into an integer from 0 to 1023
+   uint16_t iDacValue = 0;
+   if (dacValue < 0)
+      iDacValue = 0;
+   else if (iDacValue > 1.0f)
+      iDacValue = 1023;
+   else
+      iDacValue = (uint16_t)(1023 * dacValue + 0.5);
+
+   // make our packet
+   uint8_t data[] = {
+      (uint8_t)(((uint8_t)command << 4) | (iDacValue >> 6)),
+      (uint8_t)(iDacValue << 2)
+   };
 
    struct spi_ioc_transfer spi_message[1];
    memset(spi_message, 0, sizeof(spi_message));
    spi_message[0].tx_buf = (unsigned long)data;
-   spi_message[0].len = 1;
+   spi_message[0].len = sizeof(data);
 
    int result = ioctl(fileDescriptor, SPI_IOC_MESSAGE(1), spi_message);
    if (result == -1)
       std::cout << "sendX: ioctl failed" << std::endl;
    else
       std::cout << "sendX: ioctl succeeded" << std::endl;
-}
-
-
-void SPIDAC::sendY(uint8_t y)
-{
-   if (y == 0)
-      y = 1;
 }
