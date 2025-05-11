@@ -28,6 +28,8 @@ VideoFrame::~VideoFrame()
 /// </summary>
 std::string VideoFrame::toString() const
 {
+   static char HEX_DIGITS[] = {'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F' };
+
 	std::string result;
 
 	int count = getPixelDataLength();
@@ -35,8 +37,8 @@ std::string VideoFrame::toString() const
 	for (int i=0; i<count; ++i)
 	{
       uint8_t b = p[i];
-		result += 'A' + (b>>4);
-		result += 'A' + (b&0xF);
+		result += HEX_DIGITS[(b>>4)];
+		result += HEX_DIGITS[(b&0xF)];
 	}
 	return result;
 }
