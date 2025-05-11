@@ -13,6 +13,9 @@ FrameHandler::FrameHandler(void)
 }
 
 
+/// <summary>
+/// Processes the frame, locates the dot, updates the DACs
+/// </summary>
 void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 {
 	// skip the first several frames until the camera warms up
@@ -22,19 +25,20 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 
    int saturatedCount = 0;
 
+   std::vector<int> xValues;
+   std::vector<int> yValues;
+
 	// get the red intensity of each pixel... I want to know which pixels are red,
 	// and don't have blue or green, so I just report the difference between red and
 	// the larger of blue or green
-	double xSum = 0;
-	double ySum = 0;
-	double rSum = 0;
 	const uint8_t *p = frame->getPixelData();
 	auto pixelDataLength = frame->getPixelDataLength();
 	for (int i=0; i<pixelDataLength; i+=3)
 	{
-		int r = p[0];
+      // our current camera setup returns 24-bit BGR
+		int b = p[0];
 		int g = p[1];
-		int b = p[2];
+		int r = p[2];
 		if (r == 255)
          ++saturatedCount;
 		if (g == 255)
@@ -42,23 +46,27 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 		if (b == 255)
          ++saturatedCount;
 
-		int gray = std::min(g, b);
-		r -= gray;
-		g -= gray;
-		b -= gray;
+      // really simple... we are looking for red pixels; anything where
+      // r > b + g is a really quality criterion
+      if (r > b + g)
+      {
+         int x = (i/3)%640;
+         int y = (i/3)/640;
+         xValues.push_back(x);
+         yValues.push_back(y);
+      }
 
-		int x = (i/3)%640;
-		int y = (i/3)/640;
-
-		if (r >= 3*std::max(g, b))
-		{
-			r = r - 3*std::max(g, b);
-			double weight = r * r;
-			xSum += weight*x;
-			ySum += weight*y;
-			rSum += weight;
-		}
 		p += 3;
+	}
+
+	// just to reduce our worries about wild data points we use the
+	// median as our result
+	if (xValues.size() > 0)
+	{
+      std::sort(xValues.begin(), xValues.end());
+      std::sort(yValues.begin(), yValues.end());
+      this->currentX = xValues[xValues.size() / 2];
+      this->currentY = yValues[yValues.size() / 2];
 	}
 
 	// note the saturation rate

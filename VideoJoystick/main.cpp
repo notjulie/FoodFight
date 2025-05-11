@@ -88,10 +88,14 @@ int main(int argc, const char **argv)
    // Our main objects..
    FrameHandler frameHandler;
 
-   // command handlers supported by camera functions
+   // command handlers supported by frame handler
    commander.AddHandler("getImage", [&](std::string)
    {
       return frameHandler.GetImageAsString();
+   });
+   commander.AddHandler("getXY", [&](std::string)
+   {
+      return std::to_string(frameHandler.getX()) + "," + std::to_string(frameHandler.getY());
    });
 
    commander.AddHandler("getSaturation", [&frameHandler](std::string){ return std::to_string(frameHandler.getSaturiationPercent()); });
