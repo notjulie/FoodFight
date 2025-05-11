@@ -172,6 +172,20 @@
 		<Unit filename="LibCamera/LibCameraManager.cpp" />
 		<Unit filename="LibCamera/LibCameraManager.h" />
 		<Unit filename="SPIDAC.cpp" />
+		<Unit filename="SQLite/SQLDB.cpp" />
+		<Unit filename="SQLite/SQLDB.h" />
+		<Unit filename="SQLite/SQLException.cpp" />
+		<Unit filename="SQLite/SQLException.h" />
+		<Unit filename="SQLite/SQLParameter.cpp" />
+		<Unit filename="SQLite/SQLParameter.h" />
+		<Unit filename="SQLite/SQLStatement.cpp" />
+		<Unit filename="SQLite/SQLStatement.h" />
+		<Unit filename="SQLite/SQLVariant.cpp" />
+		<Unit filename="SQLite/SQLVariant.h" />
+		<Unit filename="SQLite/sqlite3.c">
+			<Option compilerVar="CC" />
+		</Unit>
+		<Unit filename="SQLite/sqlite3.h" />
 		<Unit filename="SocketListener.cpp" />
 		<Unit filename="VideoFrame.cpp" />
 		<Unit filename="main.cpp" />
