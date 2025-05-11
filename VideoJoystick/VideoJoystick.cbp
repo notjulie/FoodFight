@@ -166,8 +166,8 @@
 		<Unit filename="Bcm2835/LibBcm2835.cpp" />
 		<Unit filename="CommandProcessor.cpp" />
 		<Unit filename="FrameHandler.cpp" />
-		<Unit filename="LedPwm.cpp" />
-		<Unit filename="LedPwm.h" />
+		<Unit filename="LedControl.cpp" />
+		<Unit filename="LedControl.h" />
 		<Unit filename="LibCamera/LibCameraFrameGrabber.cpp" />
 		<Unit filename="LibCamera/LibCameraFrameGrabber.h" />
 		<Unit filename="LibCamera/LibCameraManager.cpp" />

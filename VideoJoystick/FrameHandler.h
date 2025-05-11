@@ -20,9 +20,11 @@ public:
 	FrameHandler(void);
 	void HandleFrame(const std::shared_ptr<VideoFrame> &frame);
 	std::string GetImageAsString(void);
+   double getSaturiationPercent() const { return saturationPercent; }
 
 private:
 	int framesReceived = 0;
+	double saturationPercent = 0;
 	std::mutex frameRequestMutex;
 	std::deque<std::promise<std::string>> frameRequestQueue;
 };

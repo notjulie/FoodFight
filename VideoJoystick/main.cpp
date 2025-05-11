@@ -13,7 +13,7 @@
 // project includes
 #include "CommandProcessor.h"
 #include "FrameHandler.h"
-#include "LedPwm.h"
+#include "LedControl.h"
 #include "SocketListener.h"
 #include "SPIDAC.h"
 
@@ -94,12 +94,15 @@ int main(int argc, const char **argv)
       return frameHandler.GetImageAsString();
    });
 
+   commander.AddHandler("getSaturation", [&frameHandler](std::string){ return std::to_string(frameHandler.getSaturiationPercent()); });
+
    std::signal(SIGINT, signal_handler);
    std::signal(SIGTERM, signal_handler);
    std::signal(SIGKILL, signal_handler);
 
    // Now set up our components
-   LedPwm::getInstance()->setDutyCycle(0.5);
+   LedControl::getInstance()->setLedOn(true);
+
    try
    {
       std::unique_ptr<FrameGrabber> frameGrabber(LibCameraFrameGrabber::createUniqueCamera());

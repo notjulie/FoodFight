@@ -20,6 +20,8 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 	if (framesReceived < 100)
 		return;
 
+   int saturatedCount = 0;
+
 	// get the red intensity of each pixel... I want to know which pixels are red,
 	// and don't have blue or green, so I just report the difference between red and
 	// the larger of blue or green
@@ -33,6 +35,13 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 		int r = p[0];
 		int g = p[1];
 		int b = p[2];
+		if (r == 255)
+         ++saturatedCount;
+		if (g == 255)
+         ++saturatedCount;
+		if (b == 255)
+         ++saturatedCount;
+
 		int gray = std::min(g, b);
 		r -= gray;
 		g -= gray;
@@ -51,6 +60,9 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 		}
 		p += 3;
 	}
+
+	// note the saturation rate
+	this->saturationPercent = 100.0 * saturatedCount / frame->getPixelDataLength() / 3;
 
 	// process any requests for frames from TCP clients
 	{
