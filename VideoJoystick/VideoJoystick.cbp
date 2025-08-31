@@ -188,6 +188,8 @@
 		<Unit filename="SQLite/sqlite3.h" />
 		<Unit filename="SocketListener.cpp" />
 		<Unit filename="VideoFrame.cpp" />
+		<Unit filename="XYDriver.cpp" />
+		<Unit filename="XYDriver.h" />
 		<Unit filename="main.cpp" />
 		<Extensions />
 	</Project>
