@@ -16,6 +16,7 @@
 #include "LedControl.h"
 #include "SocketListener.h"
 #include "SPIDAC.h"
+#include "XYDriver.h"
 
 
 
@@ -87,18 +88,25 @@ int main(int argc, const char **argv)
 
    // Our main objects..
    FrameHandler frameHandler;
+   XYDriver xyDriver;
 
    // command handlers supported by frame handler
    commander.AddHandler("getImage", [&](std::string)
    {
       return frameHandler.GetImageAsString();
    });
-   commander.AddHandler("getXY", [&](std::string)
+   commander.AddHandler("getPixXY", [&](std::string)
    {
       return std::to_string(frameHandler.getX()) + "," + std::to_string(frameHandler.getY());
    });
 
    commander.AddHandler("getSaturation", [&frameHandler](std::string){ return std::to_string(frameHandler.getSaturiationPercent()); });
+
+   commander.AddHandler("getXY", [&](std::string)
+   {
+      XY xy = xyDriver.getXY(XY(frameHandler.getX(), frameHandler.getY()));
+      return std::to_string(xy.x) + "," + std::to_string(xy.y);
+   });
 
    std::signal(SIGINT, signal_handler);
    std::signal(SIGTERM, signal_handler);
