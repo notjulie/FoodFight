@@ -70,7 +70,9 @@ void SPIDAC::open()
    ioctl(fileDescriptor, SPI_IOC_WR_BITS_PER_WORD, &bitsPerWord);
    ioctl(fileDescriptor, SPI_IOC_RD_BITS_PER_WORD, &bitsPerWord);
 
-   uint32_t frequency = 10000;
+   // 100KHz gets the transaction time down to well under 1ms, which is
+   // good for our purposes
+   uint32_t frequency = 100000;
    ioctl(fileDescriptor, SPI_IOC_WR_MAX_SPEED_HZ, &frequency);
    ioctl(fileDescriptor, SPI_IOC_RD_MAX_SPEED_HZ, &frequency);
 }
