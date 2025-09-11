@@ -103,7 +103,7 @@ void SPIDAC::sendDacCommand(DacCommand command, float dacValue)
    uint16_t iDacValue = 0;
    if (dacValue < 0)
       iDacValue = 0;
-   else if (iDacValue > 1.0f)
+   else if (dacValue > 1.0f)
       iDacValue = 1023;
    else
       iDacValue = (uint16_t)(1023 * dacValue + 0.5);
@@ -119,9 +119,8 @@ void SPIDAC::sendDacCommand(DacCommand command, float dacValue)
    spi_message[0].tx_buf = (unsigned long)data;
    spi_message[0].len = sizeof(data);
 
+   // on RPi3B this takes about 2ms
    int result = ioctl(fileDescriptor, SPI_IOC_MESSAGE(1), spi_message);
    if (result == -1)
       std::cout << "sendX: ioctl failed" << std::endl;
-   else
-      std::cout << "sendX: ioctl succeeded" << std::endl;
 }

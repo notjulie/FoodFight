@@ -86,11 +86,9 @@ int main(int argc, const char **argv)
    }
 #endif
 
-   // Our main objects..
+   // FrameHandler is where the fun begins... it turns incoming frames into
+   // pixel locations of the red dot
    FrameHandler frameHandler;
-   XYDriver xyDriver;
-
-   // command handlers supported by frame handler
    commander.AddHandler("getImage", [&](std::string)
    {
       return frameHandler.GetImageAsString();
@@ -99,14 +97,26 @@ int main(int argc, const char **argv)
    {
       return std::to_string(frameHandler.getX()) + "," + std::to_string(frameHandler.getY());
    });
-
    commander.AddHandler("getSaturation", [&frameHandler](std::string){ return std::to_string(frameHandler.getSaturiationPercent()); });
+   commander.AddHandler("getFrameProcessTime", [&frameHandler](std::string){ return std::to_string(frameHandler.getFrameProcessTime().count()); });
 
-   commander.AddHandler("getXY", [&](std::string)
-   {
-      XY xy = xyDriver.getXY(XY(frameHandler.getX(), frameHandler.getY()));
+   // XYDriver takes the calculated pixel location and turns it into a
+   // joystick position
+   XYDriver xyDriver;
+   frameHandler.setFrameNotify([&](int pixelX,  int pixelY){
+      XY xy = xyDriver.getXY(XY(pixelX, pixelY));
+      spiDac.sendX(xy.x);
+      spiDac.sendY(xy.y);
+   });
+   commander.AddHandler("getXY", [&](std::string) {
+      XY xy = xyDriver.getXY(XY(frameHandler.getX(), frameHandler.getY()), true);
       return std::to_string(xy.x) + "," + std::to_string(xy.y);
    });
+   commander.AddHandler("cal00", [&](std::string) {xyDriver.cal00(); return std::string();});
+   commander.AddHandler("cal01", [&](std::string) {xyDriver.cal01(); return std::string();});
+   commander.AddHandler("cal10", [&](std::string) {xyDriver.cal10(); return std::string();});
+   commander.AddHandler("cal11", [&](std::string) {xyDriver.cal11(); return std::string();});
+
 
    std::signal(SIGINT, signal_handler);
    std::signal(SIGTERM, signal_handler);

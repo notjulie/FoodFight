@@ -8,16 +8,22 @@
 #include <algorithm>
 #include "FrameHandler.h"
 
-FrameHandler::FrameHandler(void)
+
+/// <summary>
+/// Initializes a new instance of class FrameHandler
+/// </summary>
+FrameHandler::FrameHandler()
 {
 }
 
 
 /// <summary>
-/// Processes the frame, locates the dot, updates the DACs
+/// Processes the frame, locates the dot, calls the callback
 /// </summary>
 void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 {
+   auto start = std::chrono::steady_clock::now();
+
 	// skip the first several frames until the camera warms up
 	++framesReceived;
 	if (framesReceived < 100)
@@ -28,17 +34,24 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
    std::vector<int> xValues;
    std::vector<int> yValues;
 
+   // To process the entire 640x480 image takes about 100ms; this is
+   // a prime number that limits the number of pixels we actually sample.
+   // Choosing a prime number is close enough to a random sampling.  A value
+   // of 307 drops processing time down to about 0.4ms, not counting the
+   // callback.
+   constexpr int scaledown = 307;
+
 	// get the red intensity of each pixel... I want to know which pixels are red,
 	// and don't have blue or green, so I just report the difference between red and
 	// the larger of blue or green
 	const uint8_t *p = frame->getPixelData();
 	auto pixelDataLength = frame->getPixelDataLength();
-	for (int i=0; i<pixelDataLength; i+=3)
+	for (int i=0; i<pixelDataLength; i+=3*scaledown)
 	{
       // our current camera setup returns 24-bit BGR
-		int b = p[0];
-		int g = p[1];
-		int r = p[2];
+		uint8_t b = p[i];
+		uint8_t g = p[i+1];
+      uint8_t r = p[i+2];
 		if (r == 255)
          ++saturatedCount;
 		if (g == 255)
@@ -55,8 +68,6 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
          xValues.push_back(x);
          yValues.push_back(y);
       }
-
-		p += 3;
 	}
 
 	// just to reduce our worries about wild data points we use the
@@ -67,6 +78,8 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
       std::sort(yValues.begin(), yValues.end());
       this->currentX = xValues[xValues.size() / 2];
       this->currentY = yValues[yValues.size() / 2];
+      if (frameCallback)
+         frameCallback(this->currentX, this->currentY);
 	}
 
 	// note the saturation rate
@@ -81,6 +94,9 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 			frameRequestQueue.pop_front();
 		}
 	}
+
+	auto elapsed = std::chrono::steady_clock::now() - start;
+	frameProcessTime = std::chrono::duration_cast<std::chrono::microseconds>(elapsed);
 }
 
 

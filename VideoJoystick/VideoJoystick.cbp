@@ -21,7 +21,7 @@
 				<Option type="1" />
 				<Option compiler="gcc" />
 				<Compiler>
-					<Add option="-O2" />
+					<Add option="-O3" />
 				</Compiler>
 				<Linker>
 					<Add option="-s" />
@@ -172,6 +172,7 @@
 		<Unit filename="LibCamera/LibCameraManager.cpp" />
 		<Unit filename="LibCamera/LibCameraManager.h" />
 		<Unit filename="SPIDAC.cpp" />
+		<Unit filename="SPIDAC.h" />
 		<Unit filename="SQLite/SQLDB.cpp" />
 		<Unit filename="SQLite/SQLDB.h" />
 		<Unit filename="SQLite/SQLException.cpp" />

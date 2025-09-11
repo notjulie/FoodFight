@@ -9,6 +9,7 @@
 #define FRAMEHANDLER_H_
 
 #include <stdio.h>
+#include <chrono>
 #include <deque>
 #include <future>
 #include <memory>
@@ -27,6 +28,9 @@ public:
 
    int getX() const { return currentX; }
    int getY() const { return currentY; }
+   std::chrono::microseconds getFrameProcessTime() const { return frameProcessTime; }
+
+   void setFrameNotify(const std::function<void(int,int)> _frameCallback) { frameCallback = _frameCallback; }
 
 private:
 	int framesReceived = 0;
@@ -35,6 +39,10 @@ private:
 	int currentY = 0;
 	std::mutex frameRequestMutex;
 	std::deque<std::promise<std::string>> frameRequestQueue;
+
+	std::chrono::microseconds frameProcessTime;
+
+	std::function<void(int,int)> frameCallback;
 };
 
 
