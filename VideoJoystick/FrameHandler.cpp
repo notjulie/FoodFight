@@ -46,7 +46,8 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
 	// the larger of blue or green
 	const uint8_t *p = frame->getPixelData();
 	auto pixelDataLength = frame->getPixelDataLength();
-	for (int i=0; i<pixelDataLength; i+=3*scaledown)
+	int i = 0;
+	for (int n=0; n<10000; ++n)
 	{
       // our current camera setup returns 24-bit BGR
 		uint8_t b = p[i];
@@ -68,6 +69,10 @@ void FrameHandler::HandleFrame(const std::shared_ptr<VideoFrame> &frame)
          xValues.push_back(x);
          yValues.push_back(y);
       }
+
+      i += 3*scaledown;
+      if (i >= pixelDataLength)
+         i -= pixelDataLength;
 	}
 
 	// just to reduce our worries about wild data points we use the
