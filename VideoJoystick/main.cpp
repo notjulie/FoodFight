@@ -16,8 +16,11 @@
 #include "LedControl.h"
 #include "SocketListener.h"
 #include "SPIDAC.h"
+#include "VJConfig.h"
 #include "XYDriver.h"
 
+
+static const std::filesystem::path CONFIG_FILE_PATH = "/usr/local/share/VideoJoystick/config.sql";
 
 
 extern "C" {
@@ -45,6 +48,9 @@ static void signal_handler(int signal_number)
  */
 int main(int argc, const char **argv)
 {
+   // load our config
+   VJConfig config(CONFIG_FILE_PATH);
+
    // create a command handler; we can add commands to it as we go along
    CommandProcessor commander;
 
@@ -100,9 +106,14 @@ int main(int argc, const char **argv)
    commander.AddHandler("getSaturation", [&frameHandler](std::string){ return std::to_string(frameHandler.getSaturiationPercent()); });
    commander.AddHandler("getFrameProcessTime", [&frameHandler](std::string){ return std::to_string(frameHandler.getFrameProcessTime().count()); });
 
+   // ============================================================
+   // Initialize XYDriver
+   //
    // XYDriver takes the calculated pixel location and turns it into a
    // joystick position
+   // ============================================================
    XYDriver xyDriver;
+   xyDriver.setConfig(config.getXYDriverConfig());
    frameHandler.setFrameNotify([&](int pixelX,  int pixelY){
       XY xy = xyDriver.getXY(XY(pixelX, pixelY));
       spiDac.sendX(xy.x);
@@ -112,10 +123,26 @@ int main(int argc, const char **argv)
       XY xy = xyDriver.getXY(XY(frameHandler.getX(), frameHandler.getY()), true);
       return std::to_string(xy.x) + "," + std::to_string(xy.y);
    });
-   commander.AddHandler("cal00", [&](std::string) {xyDriver.cal00(); return std::string();});
-   commander.AddHandler("cal01", [&](std::string) {xyDriver.cal01(); return std::string();});
-   commander.AddHandler("cal10", [&](std::string) {xyDriver.cal10(); return std::string();});
-   commander.AddHandler("cal11", [&](std::string) {xyDriver.cal11(); return std::string();});
+   commander.AddHandler("cal00", [&](std::string) {
+      xyDriver.cal00();
+      config.setXYDriverConfig(xyDriver.getConfig());
+      return std::string();
+      });
+   commander.AddHandler("cal01", [&](std::string) {
+      xyDriver.cal01();
+      config.setXYDriverConfig(xyDriver.getConfig());
+      return std::string();
+      });
+   commander.AddHandler("cal10", [&](std::string) {
+      xyDriver.cal10();
+      config.setXYDriverConfig(xyDriver.getConfig());
+      return std::string();
+      });
+   commander.AddHandler("cal11", [&](std::string) {
+      xyDriver.cal11();
+      config.setXYDriverConfig(xyDriver.getConfig());
+      return std::string();
+      });
 
 
    std::signal(SIGINT, signal_handler);

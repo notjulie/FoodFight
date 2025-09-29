@@ -39,6 +39,7 @@
 			<Add directory="../dependencies/userland/interface/vcos" />
 			<Add directory="../dependencies/userland/interface/vchiq_arm" />
 			<Add directory="." />
+			<Add directory="./SQLite" />
 		</Compiler>
 		<Linker>
 			<Add library="bcm2835" />
@@ -188,6 +189,8 @@
 		</Unit>
 		<Unit filename="SQLite/sqlite3.h" />
 		<Unit filename="SocketListener.cpp" />
+		<Unit filename="VJConfig.cpp" />
+		<Unit filename="VJConfig.h" />
 		<Unit filename="VideoFrame.cpp" />
 		<Unit filename="XYDriver.cpp" />
 		<Unit filename="XYDriver.h" />

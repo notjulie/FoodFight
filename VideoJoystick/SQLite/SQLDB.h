@@ -2,6 +2,7 @@
 #ifndef SQLDB_H
 #define SQLDB_H
 
+#include <functional>
 #include <vector>
 #include "sqlite3.h"
 #include "SQLException.h"
@@ -30,12 +31,15 @@ public:
       return SQLStatement(db, sql, SQLParameterList(args...));
    }
 
+   void ExecuteTransaction(const std::function<void()> &transaction);
+
 private:
    SQLVariant DoScalarQuery(const std::string &sql, const SQLParameterList &params);
    void DoNonQuery(const std::string &sql, const SQLParameterList &params);
 
 private:
    sqlite3  *db = nullptr;
+   unsigned nextTransactionID = 0;
 };
 
 

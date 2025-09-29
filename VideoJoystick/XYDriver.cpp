@@ -20,12 +20,12 @@ XY XYDriver::getXY(XY pixelXY, bool verbose)
 
    // map our pixel vector to a sum of our xy01 and xy11 vectors
    float magnitude01, magnitude10, magnitude11;
-   decompose(pixelXY - xy00, xy01 - xy00, xy11 - xy00, &magnitude01, &magnitude11);
+   decompose(pixelXY - config.xy00, config.xy01 - config.xy00, config.xy11 - config.xy00, &magnitude01, &magnitude11);
    if (verbose)
    {
-      std::cout << (pixelXY - xy00).x << "," << (pixelXY - xy00).y << std::endl;
-      std::cout << (xy01 - xy00).x << "," << (xy01 - xy00).y << std::endl;
-      std::cout << (xy11 - xy00).x << "," << (xy11 - xy00).y << std::endl;
+      std::cout << (pixelXY - config.xy00).x << "," << (pixelXY - config.xy00).y << std::endl;
+      std::cout << (config.xy01 - config.xy00).x << "," << (config.xy01 - config.xy00).y << std::endl;
+      std::cout << (config.xy11 - config.xy00).x << "," << (config.xy11 - config.xy00).y << std::endl;
       std::cout << magnitude11 << "," << magnitude01 << std::endl;
    }
 
@@ -35,7 +35,7 @@ XY XYDriver::getXY(XY pixelXY, bool verbose)
       return clip(XY(magnitude11, magnitude11 + magnitude01));
 
    // else we use the other pair
-   decompose(pixelXY - xy00, xy10 - xy00, xy11 - xy00, &magnitude10, &magnitude11);
+   decompose(pixelXY - config.xy00, config.xy10 - config.xy00, config.xy11 - config.xy00, &magnitude10, &magnitude11);
    if (verbose)
       std::cout << magnitude11 << "," << magnitude10 << std::endl;
    return clip(XY(magnitude11 + magnitude10, magnitude11));

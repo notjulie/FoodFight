@@ -62,3 +62,30 @@ void SQLDB::DoNonQuery(const std::string &sql, const SQLParameterList &params)
    // we aren't looking for results
    statement.MoveNext();
 }
+
+/// <summary>
+/// Executes the given function in a transactional context
+/// </summary>
+void SQLDB::ExecuteTransaction(const std::function<void()> &transaction)
+{
+   // NOTE: BEGIN-COMMIT transactions are not nestable in SQLite, but
+   // SQLite provides SAVEPOINT-RELEASE to handle this
+   char transactionID[20];
+   sprintf(transactionID, "save_%d", nextTransactionID++);
+
+   try {
+      ExecuteNonQuery(std::string("SAVEPOINT ") + transactionID);
+      transaction();
+      ExecuteNonQuery(std::string("RELEASE ") + transactionID);
+   }
+   catch (...) {
+      try {
+        ExecuteNonQuery(std::string("ROLLBACK TO ") + transactionID);
+      }
+      catch (...) {
+      }
+
+      throw;
+   }
+}
+

@@ -24,17 +24,27 @@ public:
 };
 
 
+struct XYDriverConfig {
+   XY xy00;
+   XY xy01 = {0, 480};
+   XY xy10 = {640, 0};
+   XY xy11 = {640, 480};
+};
+
 /// <summary>
 /// Manages converting pixel locations to XY joystick outputs
 /// </summary>
 class XYDriver {
 public:
+   XYDriverConfig getConfig() const { return config; }
+   void setConfig(const XYDriverConfig &config) { this->config = config; }
+
    XY getXY(XY pixelXY, bool verbose = false);
 
-   void cal00() { xy00 = getStablePixelXY(); }
-   void cal01() { xy01 = getStablePixelXY(); }
-   void cal10() { xy10 = getStablePixelXY(); }
-   void cal11() { xy11 = getStablePixelXY(); }
+   void cal00() { config.xy00 = getStablePixelXY(); }
+   void cal01() { config.xy01 = getStablePixelXY(); }
+   void cal10() { config.xy10 = getStablePixelXY(); }
+   void cal11() { config.xy11 = getStablePixelXY(); }
 
 private:
    XY clip(XY xy);
@@ -45,10 +55,7 @@ private:
 private:
    static constexpr unsigned JournalSize = 60;
 
-   XY xy00;
-   XY xy01 = {0, 480};
-   XY xy10 = {640, 0};
-   XY xy11 = {640, 480};
+   XYDriverConfig config;
 
    XY journal[JournalSize];
    unsigned journalIndex = 0;
